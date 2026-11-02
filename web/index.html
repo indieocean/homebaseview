@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>HomeView</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Shown when the page was opened without the session token -->
+  <section id="view-locked" class="view center" hidden>
+    <div class="card narrow">
+      <h1>HomeView</h1>
+      <p class="muted">Open HomeView from the menu bar, or use the link printed in the terminal when you run <code>npm start</code>.</p>
+    </div>
+  </section>
+
+  <!-- Ring sign-in -->
+  <section id="view-login" class="view center" hidden>
+    <form id="login-form" class="card narrow" autocomplete="on">
+      <h1>Sign in to Ring</h1>
+      <p class="muted" id="login-note">Your password goes straight to Ring. Only the resulting session token is saved on this Mac.</p>
+      <label>Email<input name="email" type="email" autocomplete="username" required></label>
+      <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+      <p class="error" id="login-error" hidden></p>
+      <button class="primary" type="submit">Sign in</button>
+    </form>
+    <form id="code-form" class="card narrow" hidden>
+      <h1>Verification code</h1>
+      <p class="muted" id="code-prompt"></p>
+      <label>Code<input name="code" inputmode="numeric" autocomplete="one-time-code" required maxlength="16"></label>
+      <p class="error" id="code-error" hidden></p>
+      <button class="primary" type="submit">Verify</button>
+      <button class="link" type="button" id="code-back">Start over</button>
+    </form>
+  </section>
+
+  <!-- Main app -->
+  <section id="view-main" class="view" hidden>
+    <header class="topbar">
+      <div class="brand">HomeView</div>
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="cameras" aria-selected="true">Cameras</button>
+        <button role="tab" data-tab="activity" aria-selected="false">Activity <span id="activity-badge" class="badge" hidden></span></button>
+      </nav>
+      <button class="icon" id="settings-btn" title="Settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+      </button>
+    </header>
+
+    <div id="banner" class="banner" hidden></div>
+
+    <main>
+      <div id="tab-cameras" class="tab-panel">
+        <div id="camera-grid" class="grid"></div>
+        <p id="no-cameras" class="muted center-text" hidden>No cameras found on this Ring account.</p>
+      </div>
+      <div id="tab-activity" class="tab-panel" hidden>
+        <div class="filters">
+          <select id="filter-camera" aria-label="Camera"><option value="">All cameras</option></select>
+          <select id="filter-kind" aria-label="Type">
+            <option value="">All events</option>
+            <option value="motion">Motion</option>
+            <option value="ding">Doorbell</option>
+          </select>
+        </div>
+        <ul id="activity-list" class="activity"></ul>
+        <p id="no-activity" class="muted center-text" hidden>No events in the last 24 hours.</p>
+      </div>
+    </main>
+  </section>
+
+  <!-- Live view / recording player -->
+  <section id="player" class="player" hidden>
+    <header class="player-bar">
+      <button class="icon" id="player-close" aria-label="Back">
+        <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="player-title">
+        <div id="player-name"></div>
+        <div id="player-sub" class="muted small"></div>
+      </div>
+      <span id="live-dot" class="live-dot" hidden>LIVE</span>
+    </header>
+    <div class="video-wrap">
+      <video id="video" playsinline muted autoplay></video>
+      <div id="video-status" class="video-status"></div>
+    </div>
+    <div id="live-controls" class="controls">
+      <button class="ctl" id="ctl-audio" title="Listen">
+        <svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path class="on" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/><path class="off" d="m22 9-6 6m0-6 6 6"/></svg>
+        <span>Sound</span>
+      </button>
+      <button class="ctl" id="ctl-talk" title="Talk through the camera">
+        <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg>
+        <span>Talk</span>
+      </button>
+      <button class="ctl" id="ctl-light" title="Floodlight" hidden>
+        <svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z"/></svg>
+        <span>Light</span>
+      </button>
+      <button class="ctl danger" id="ctl-siren" title="Siren" hidden>
+        <svg viewBox="0 0 24 24"><path d="M7 18v-6a5 5 0 0 1 10 0v6M5 21h14v-3H5zM12 2v2M4.2 5.2l1.4 1.4M19.8 5.2l-1.4 1.4"/></svg>
+        <span>Siren</span>
+      </button>
+      <button class="ctl" id="ctl-motion" title="Motion detection">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></svg>
+        <span>Motion</span>
+      </button>
+      <button class="ctl" id="ctl-snap" title="Save a still image">
+        <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span>Still</span>
+      </button>
+    </div>
+    <p id="player-error" class="error pad" hidden></p>
+  </section>
+
+  <!-- Settings sheet -->
+  <dialog id="settings">
+    <form method="dialog" class="sheet">
+      <h2>Settings</h2>
+      <label class="row" id="notify-row">
+        <span>Desktop notifications<br><span class="muted small">Motion and doorbell alerts</span></span>
+        <input type="checkbox" id="set-notify">
+      </label>
+      <label class="row">
+        <span>Notify on motion<br><span class="muted small">Doorbell presses always notify</span></span>
+        <input type="checkbox" id="set-notify-motion">
+      </label>
+      <label class="row">
+        <span>Refresh stills every</span>
+        <select id="set-refresh">
+          <option value="15">15 s</option>
+          <option value="30">30 s</option>
+          <option value="60">1 min</option>
+          <option value="0">Never</option>
+        </select>
+      </label>
+      <div class="row">
+        <span>Ring account</span>
+        <button type="button" class="danger-text" id="signout-btn">Sign out</button>
+      </div>
+      <button class="primary" value="close">Done</button>
+    </form>
+  </dialog>
+
+  <script src="/vendor/hls.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

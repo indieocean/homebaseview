@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Swift / macOS app build output
+macos/.build/
+macos/build/
+macos/*.iconset/
+.swiftpm/
+*.xcodeproj/xcuserdata/
+DerivedData/
+
+# Local runtime data (the app stores this in ~/.homeview, but never commit it if redirected here)
+.homeview/
+hls/
+*.log
+ring-token
+session-token
+events.json
+server.pid
+
+# Secrets and local config
+.env
+.env.*
+
+# Editors and OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
