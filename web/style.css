@@ -97,12 +97,12 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .auth-card h1 { margin: 0; font-size: 24px; font-weight: 750; letter-spacing: -.3px; }
 .auth-card h1 span, .wordmark span { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .auth-sub { margin: 0 0 10px; }
-.auth-form { width: 100%; display: grid; gap: 12px; text-align: left; }
+.auth-form { width: 100%; min-width: 0; display: grid; gap: 12px; text-align: left; }
 .auth-form .btn-primary { margin-top: 4px; }
-.field { display: grid; gap: 6px; }
+.field { display: grid; gap: 6px; min-width: 0; }
 .field > span { font-size: 12px; font-weight: 600; color: var(--muted); }
 .field input {
-  background: var(--field); border: 1px solid var(--line-strong); border-radius: 10px;
+  width: 100%; min-width: 0; background: var(--field); border: 1px solid var(--line-strong); border-radius: 10px;
   padding: 11px 13px; outline: none; user-select: text; -webkit-user-select: text;
   transition: border-color .12s, box-shadow .12s;
 }

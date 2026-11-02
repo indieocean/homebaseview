@@ -104,7 +104,7 @@ $('#login-form').addEventListener('submit', async (ev) => {
 $('#code-form').addEventListener('submit', async (ev) => {
   ev.preventDefault()
   const form = ev.currentTarget
-  const btn = form.querySelector('button.primary')
+  const btn = form.querySelector('button[type=submit]')
   $('#code-error').hidden = true
   btn.disabled = true
   try {
@@ -180,7 +180,7 @@ function showBanner(text, action, onAction) {
   b.textContent = text
   if (action) {
     const btn = document.createElement('button')
-    btn.className = 'link'
+    btn.className = 'btn-link'
     btn.textContent = action
     btn.onclick = onAction
     b.append(btn)
@@ -487,7 +487,7 @@ video.addEventListener('waiting', () => { if (state.player?.mode === 'live') set
 function addRetry() {
   const p = $('#player-error')
   const btn = document.createElement('button')
-  btn.className = 'link'
+  btn.className = 'btn-link'
   btn.textContent = 'Try again'
   btn.onclick = () => openLive(state.player.cameraId)
   p.append(' ', btn)
