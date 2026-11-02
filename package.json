@@ -22,5 +22,13 @@
     "rxjs": "^7.8.2",
     "werift": "^0.22.4"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/indieocean/homebaseview.git"
+  },
+  "homepage": "https://github.com/indieocean/homebaseview#readme",
+  "bugs": {
+    "url": "https://github.com/indieocean/homebaseview/issues"
+  }
 }

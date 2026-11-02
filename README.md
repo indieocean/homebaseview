@@ -6,7 +6,8 @@
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111?logo=apple&logoColor=white">
   <img alt="Node 20+" src="https://img.shields.io/badge/Node-20%2B-3c873a?logo=node.js&logoColor=white">
   <img alt="Swift 5.10" src="https://img.shields.io/badge/Swift-5.10-f05138?logo=swift&logoColor=white">
-  <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-6a7dff">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-6a7dff"></a>
+  <a href="https://github.com/indieocean/homebaseview/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/indieocean/homebaseview?color=1fc8e8"></a>
 </p>
 
 <p align="center">
@@ -53,7 +54,7 @@
 **Requirements:** macOS 14 Sonoma or later, [Node.js](https://nodejs.org) 20 or later, and the Xcode command line tools (`xcode-select --install`).
 
 ```sh
-git clone https://github.com/<your-account>/homebaseview.git
+git clone https://github.com/indieocean/homebaseview.git
 cd homebaseview
 npm install
 bash macos/build-app.sh --install   # builds HomeBaseView.app and copies it to /Applications
@@ -205,9 +206,9 @@ Ring invalidates sessions when your password changes or the device is removed in
 
 ## Contributing
 
-Issues and pull requests are welcome.
+[Issues](https://github.com/indieocean/homebaseview/issues) and [pull requests](https://github.com/indieocean/homebaseview/pulls) are welcome.
 
-1. Fork the repo and create a branch.
+1. [Fork the repo](https://github.com/indieocean/homebaseview/fork) and create a branch.
 2. Run the server with `npm start -- --open` and edit files in `web/` or `server/`. There's no build step, so just reload.
 3. For the menu bar app, run `npm run app` and open `macos/build/HomeBaseView.app`.
 4. Check syntax with `npm run check`, describe what you tested, and open a PR.
