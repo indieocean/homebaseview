@@ -1,5 +1,6 @@
 import crypto from 'node:crypto'
 import path from 'node:path'
+import { Readable } from 'node:stream'
 import express from 'express'
 import { config } from './config.js'
 import * as ring from './ring.js'
@@ -188,16 +189,72 @@ export function createApp(sessionToken) {
     })
   })
 
+  // Ring's signed download URLs expire after 15 minutes; reuse one for a while so seeking stays fast.
+  const recordingUrls = new Map() // eventId -> { url, expires }
+  async function recordingUrl(event) {
+    const cached = recordingUrls.get(event.id)
+    if (cached && cached.expires > Date.now()) return cached.url
+    const url = await ring.getRecordingUrl(event)
+    if (url) recordingUrls.set(event.id, { url, expires: Date.now() + 10 * 60_000 })
+    for (const [id, c] of recordingUrls) if (c.expires <= Date.now()) recordingUrls.delete(id)
+    return url
+  }
+
   api.get('/events/:eventId/recording', async (req, res) => {
     const event = ring.getEvent(req.params.eventId)
     if (!event) return res.status(404).json({ error: 'Event not found' })
     try {
-      const url = await ring.getRecordingUrl(event)
+      const url = await recordingUrl(event)
       if (!url) return res.status(404).json({ error: 'No recording for this event yet. Recordings need a Ring Protect plan.' })
-      res.json({ url })
+      // Played through the proxy below, not Ring's URL directly (see there).
+      res.json({ url: `/api/events/${encodeURIComponent(event.id)}/recording.mp4` })
     } catch (err) {
       console.error('[api] recording lookup failed:', err.message)
       res.status(404).json({ error: 'Recording not available yet. Try again in a minute.' })
+    }
+  })
+
+  /**
+   * Byte-range proxy for a recording. Ring's download host redirects each request to a URL with
+   * the requested Range baked into its query string, so a player that reuses the redirected URL
+   * (WebKit does) gets the same first two bytes forever and never loads. Here every range request
+   * goes to the original signed URL and follows the redirect fresh.
+   */
+  api.get('/events/:eventId/recording.mp4', async (req, res) => {
+    const event = ring.getEvent(req.params.eventId)
+    if (!event) return res.status(404).end()
+    const abort = new AbortController()
+    res.on('close', () => abort.abort())
+    try {
+      const url = await recordingUrl(event)
+      if (!url) return res.status(404).end()
+      const headers = {}
+      if (typeof req.headers.range === 'string') headers.Range = req.headers.range
+      const upstream = await fetch(url, { headers, signal: abort.signal, redirect: 'follow' })
+      if (upstream.status === 403) recordingUrls.delete(event.id) // expired signature; next request re-resolves
+      if (!upstream.ok) return res.status(upstream.status === 416 ? 416 : 502).end()
+      res.status(upstream.status)
+      res.set('Content-Type', 'video/mp4')
+      res.set('Accept-Ranges', 'bytes')
+      res.set('Cache-Control', 'no-store')
+      if (req.query.download === '1') {
+        const t = new Date(event.timestamp)
+        const pad = (n) => String(n).padStart(2, '0')
+        const stamp = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())} ${pad(t.getHours())}.${pad(t.getMinutes())}.${pad(t.getSeconds())}`
+        const name = `${event.cameraName} ${stamp}.mp4`.replace(/[\\/:*?"<>|\x00-\x1f]/g, '-')
+        res.set('Content-Disposition', `attachment; filename="${name.replace(/[^\x20-\x7e]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(name)}`)
+      }
+      for (const h of ['content-length', 'content-range']) {
+        const v = upstream.headers.get(h)
+        if (v) res.set(h, v)
+      }
+      if (!upstream.body) return res.end()
+      Readable.fromWeb(upstream.body).on('error', () => res.destroy()).pipe(res)
+    } catch (err) {
+      if (abort.signal.aborted) return
+      console.error('[api] recording proxy failed:', err.message)
+      if (!res.headersSent) res.status(502).end()
+      else res.destroy()
     }
   })
 

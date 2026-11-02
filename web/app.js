@@ -12,12 +12,20 @@ const nativeCall = async (msg) => {
 // Preferences (per browser; mirrored to the menu bar app for notifications)
 // ---------------------------------------------------------------------------
 const prefs = (() => {
-  const defaults = { notify: true, notifyMotion: true, refresh: 30, lastSeenSeq: 0, layout: 'grid' }
+  const defaults = { notify: true, notifyMotion: true, menuBarDot: true, refresh: 30, lastSeenSeq: 0, layout: 'grid' }
   try { return { ...defaults, ...JSON.parse(localStorage.getItem('homebaseview-prefs') || '{}') } } catch { return defaults }
 })()
-function savePrefs() {
+const NATIVE_PREFS = ['notify', 'notifyMotion', 'menuBarDot']
+function savePrefs({ syncNative = true } = {}) {
   try { localStorage.setItem('homebaseview-prefs', JSON.stringify(prefs)) } catch { /* private mode */ }
-  nativeCall({ type: 'prefs', notify: prefs.notify, notifyMotion: prefs.notifyMotion })
+  if (syncNative) nativeCall({ type: 'prefs', ...Object.fromEntries(NATIVE_PREFS.map((k) => [k, prefs[k]])) })
+}
+/** In the menu bar app, notification settings live in the app (also editable from its right-click menu). */
+async function loadNativePrefs() {
+  const p = await nativeCall({ type: 'getPrefs' })
+  if (!p) return
+  for (const k of NATIVE_PREFS) if (typeof p[k] === 'boolean') prefs[k] = p[k]
+  savePrefs({ syncNative: false })
 }
 
 const state = {
@@ -59,8 +67,10 @@ function show(view) {
 async function boot() {
   let health
   try { health = await api('/health') } catch (e) { if (!(e instanceof Unauthorized)) setTimeout(boot, 2000); return }
-  savePrefs()
+  await loadNativePrefs()
   if (health.authenticated) return enterMain()
+  // Signed in, but Ring is still connecting (right after the app starts): wait instead of showing sign-in.
+  if (health.connecting || (health.hasToken && !health.authExpired)) { setTimeout(boot, 1000); return }
   showLogin(health.authExpired ? 'Your Ring session expired. Sign in again.' : null)
 }
 
@@ -141,6 +151,12 @@ async function loadCameras() {
 
 async function loadEvents() {
   state.events = await api('/events')
+  // First launch: everything loaded is Ring's history, not new activity. Start counting from now.
+  if (!prefs.seenInitialized) {
+    prefs.lastSeenSeq = state.events.reduce((m, e) => Math.max(m, e.seq), prefs.lastSeenSeq)
+    prefs.seenInitialized = true
+    savePrefs()
+  }
   renderActivity()
 }
 
@@ -168,6 +184,7 @@ function connectStream() {
     if (a.authExpired) showBanner('Ring signed this Mac out. Sign in again to keep watching.', 'Sign in', () => showLogin())
     else if (!a.authenticated) showLogin()
     else if ($('#view-main').hidden) enterMain()
+    else Promise.all([loadCameras(), loadEvents()]).catch(() => {}) // (re)connected: refresh the list
   })
   es.onerror = () => {
     // EventSource reconnects by itself; check whether we lost auth or the server.
@@ -193,6 +210,7 @@ for (const btn of document.querySelectorAll('[data-tab]')) {
   btn.addEventListener('click', () => setTab(btn.dataset.tab))
 }
 function setTab(tab) {
+  if (state.tab === 'activity' && tab !== 'activity') settleSeenDots()
   state.tab = tab
   for (const b of document.querySelectorAll('[data-tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === tab))
   $('#tab-cameras').hidden = tab !== 'cameras'
@@ -225,6 +243,7 @@ function renderGrid() {
       <img class="thumb" alt="">
       <div class="chips"></div>
       <span class="battery" hidden></span>
+      <span class="offline-icon"><svg viewBox="0 0 24 24"><path d="M16 16v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m4 0h3a2 2 0 0 1 2 2v3.3l1 1L22 7v10M2 2l20 20"/></svg></span>
       <span class="play"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z"/></svg></span>
       <div class="caption"><span class="name"></span><span class="age"></span></div>`
     tile.addEventListener('click', () => openLive(cam.id))
@@ -250,7 +269,10 @@ function renderTile(cam) {
   tile.querySelector('.chips').innerHTML = chips.join('')
   const battery = tile.querySelector('.battery')
   battery.hidden = !(cam.hasBattery && cam.batteryLevel != null)
-  battery.classList.toggle('low', !!cam.hasLowBattery)
+  const level = cam.batteryLevel ?? 100
+  battery.classList.toggle('critical', !cam.isCharging && level <= 10)
+  battery.classList.toggle('low', !cam.isCharging && level > 10 && (!!cam.hasLowBattery || level <= 20))
+  battery.title = cam.isCharging ? `Charging, ${level}%` : level <= 20 ? `Low battery, ${level}%` : `Battery ${level}%`
   battery.innerHTML = battery.hidden ? '' : `${cam.isCharging ? ICONS.bolt : ICONS.battery}${cam.batteryLevel}%`
   updateAge(cam.id)
 }
@@ -268,13 +290,14 @@ function refreshSnapshot(id) {
   img.onload = () => {
     snapLoading.delete(id)
     const tile = document.querySelector(`.tile[data-id="${id}"]`)
-    if (tile) { tile.querySelector('.thumb').src = img.src; tile.classList.add('loaded') }
+    if (tile) { tile.querySelector('.thumb').src = img.src; tile.classList.add('loaded'); tile.classList.remove('no-still') }
     state.snapshotAt.set(id, Date.now())
     updateAge(id)
   }
   img.onerror = () => {
     snapLoading.delete(id)
-    document.querySelector(`.tile[data-id="${id}"]`)?.classList.add('loaded') // stop the shimmer
+    const tile = document.querySelector(`.tile[data-id="${id}"]`)
+    tile?.classList.add('loaded', 'no-still') // stop the shimmer
   }
   img.src = snapshotUrl(id)
 }
@@ -365,9 +388,9 @@ function eventItem(e, { showCamera = true } = {}) {
     <span class="kind ${cls}">${icon}</span>
     <span class="what"><b></b><small></small></span>
     <span class="when"><b></b><span></span></span>
-    ${e.seq > prefs.lastSeenSeq ? '<span class="new"></span>' : ICONS.chev}`
+    ${showCamera && e.seq > newSince() ? '<span class="new" title="New since your last visit"></span>' : ICONS.chev}`
   btn.querySelector('.what b').textContent = eventLabel(e)
-  btn.querySelector('.what small').textContent = showCamera ? e.cameraName : 'Tap to play recording'
+  btn.querySelector('.what small').textContent = showCamera ? e.cameraName : 'Play recording'
   btn.querySelector('.when b').textContent = new Date(e.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
   btn.querySelector('.when span').textContent = relTime(Date.parse(e.timestamp))
   btn.addEventListener('click', () => openClip(e))
@@ -383,10 +406,21 @@ function renderRecent() {
   $('#recent-empty').hidden = list.length > 0
 }
 
+/** Events newer than this get a "new" dot. Fixed while the Activity tab is open, then caught up. */
+let dotsBaseline = null
+function newSince() { return dotsBaseline ?? prefs.lastSeenSeq }
+
 function markEventsSeen() {
   const max = state.events.reduce((m, e) => Math.max(m, e.seq), 0)
+  if (dotsBaseline === null) dotsBaseline = prefs.lastSeenSeq
   if (max > prefs.lastSeenSeq) { prefs.lastSeenSeq = max; savePrefs() }
   updateBadge()
+}
+/** Leaving Activity: what was new has now been seen, so drop the dots for next time. */
+function settleSeenDots() {
+  if (dotsBaseline === null) return
+  dotsBaseline = null
+  renderActivity()
 }
 
 function updateBadge() {
@@ -429,7 +463,10 @@ async function openLive(cameraId) {
   $('#player-sub').textContent = 'Live view'
   $('#live-dot').hidden = true
   $('#live-controls').hidden = false
+  $('#player-save').hidden = true
+  $('#player-share').hidden = true
   video.controls = false
+  $('#clip-bar').hidden = true
   video.muted = true
   video.poster = document.querySelector(`.tile[data-id="${cameraId}"] .thumb`)?.src || ''
   setPlayerError('')
@@ -483,6 +520,12 @@ video.addEventListener('playing', () => {
   if (state.player?.mode === 'live') $('#live-dot').hidden = false
 })
 video.addEventListener('waiting', () => { if (state.player?.mode === 'live') setStatus('Buffering…') })
+video.addEventListener('loadeddata', () => { if (state.player?.mode === 'clip') setStatus('') })
+video.addEventListener('error', () => {
+  if (state.player?.mode !== 'clip' || !video.getAttribute('src')) return
+  setStatus('')
+  setPlayerError('The recording could not be played. It may still be processing — try again in a minute.')
+})
 
 function addRetry() {
   const p = $('#player-error')
@@ -503,6 +546,8 @@ async function openClip(event) {
   $('#player-sub').textContent = new Date(event.timestamp).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit', second: '2-digit' })
   $('#live-dot').hidden = true
   $('#live-controls').hidden = true
+  $('#player-save').hidden = true // shown once the recording resolves
+  $('#player-share').hidden = true
   setPlayerError('')
   renderRecent()
   setStatus('Loading recording…')
@@ -511,9 +556,12 @@ async function openClip(event) {
     const { url, error } = await fetch(`/api/events/${encodeURIComponent(event.id)}/recording`, { credentials: 'same-origin' }).then((r) => r.json())
     if (state.player?.token !== token) return
     if (!url) throw new Error(error || 'No recording available.')
-    video.controls = true
+    video.controls = false
+    $('#clip-bar').hidden = false
     video.muted = false
     video.src = url
+    $('#player-save').hidden = false
+    $('#player-share').hidden = !canShare
     video.play().catch(() => { video.muted = true; video.play().catch(() => {}) })
   } catch (e) {
     if (state.player?.token !== token) return
@@ -525,6 +573,8 @@ async function openClip(event) {
 function closePlayer() {
   const p = state.player
   if (!p) return
+  $('#clip-bar').hidden = true
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
   state.player = null
   if (p.hls) p.hls.destroy()
   video.pause()
@@ -538,7 +588,123 @@ function closePlayer() {
   $('#player').hidden = true
 }
 $('#player-close').addEventListener('click', closePlayer)
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.player && !$('#settings').open) closePlayer() })
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !state.player || $('#settings').open || document.fullscreenElement) return
+  if (document.body.classList.contains('video-only')) { e.preventDefault(); toggleFullscreen(); return }
+  closePlayer()
+})
+
+// ---------------------------------------------------------------------------
+// Recording controls
+// ---------------------------------------------------------------------------
+const clipBar = $('#clip-bar')
+const seek = $('#clip-seek')
+let seeking = false
+function fmtTime(t) {
+  if (!Number.isFinite(t) || t < 0) t = 0
+  const s = Math.floor(t % 60), m = Math.floor(t / 60) % 60, h = Math.floor(t / 3600)
+  return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`
+}
+function togglePlay() {
+  if (video.paused) video.play().catch(() => {}); else video.pause()
+}
+function syncClipBar() {
+  clipBar.classList.toggle('playing', !video.paused)
+  clipBar.classList.toggle('paused', video.paused)
+  clipBar.classList.toggle('muted', video.muted)
+  $('#clip-time').textContent = fmtTime(video.currentTime)
+  $('#clip-duration').textContent = fmtTime(video.duration)
+  if (!seeking && video.duration > 0) seek.value = String(Math.round((video.currentTime / video.duration) * 1000))
+}
+for (const ev of ['play', 'pause', 'timeupdate', 'durationchange', 'loadedmetadata', 'volumechange', 'emptied']) video.addEventListener(ev, syncClipBar)
+$('#clip-play').addEventListener('click', togglePlay)
+$('#clip-mute').addEventListener('click', () => { video.muted = !video.muted })
+seek.addEventListener('input', () => {
+  seeking = true
+  if (video.duration > 0) {
+    const t = (Number(seek.value) / 1000) * video.duration
+    $('#clip-time').textContent = fmtTime(t)
+    video.currentTime = t
+  }
+})
+seek.addEventListener('change', () => { seeking = false })
+document.addEventListener('keydown', (e) => {
+  if (state.player?.mode !== 'clip' || e.target.closest?.('input, select, textarea, button, dialog[open]')) return
+  if (e.key === ' ') { e.preventDefault(); togglePlay() }
+  else if (e.key === 'ArrowLeft') video.currentTime = Math.max(0, video.currentTime - 5)
+  else if (e.key === 'ArrowRight') video.currentTime = Math.min(video.duration || 0, video.currentTime + 5)
+})
+
+// Full screen.
+// In the menu bar app, WebKit's own full screen can't be used: the popover floats above the
+// full screen space and closes as soon as it loses focus. Instead the app moves playback into its
+// window and makes that window full screen, while the page shows only the video ("video-only").
+// In a browser, the <video> element goes full screen the standard way.
+const isFullscreen = () => document.body.classList.contains('video-only') || !!document.fullscreenElement
+async function toggleFullscreen() {
+  const p = state.player
+  if (native) {
+    if (document.body.classList.contains('video-only')) return nativeCall({ type: 'fullscreen', on: false })
+    if (!p) return
+    return nativeCall({
+      type: 'fullscreen', on: true,
+      mode: p.mode, cameraId: p.cameraId, eventId: p.event?.id ?? null, time: p.mode === 'clip' ? video.currentTime || 0 : 0,
+    })
+  }
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen()
+    else if (video.requestFullscreen) await video.requestFullscreen()
+    else video.webkitEnterFullscreen?.()
+  } catch { /* the browser refused; nothing to undo */ }
+}
+function setVideoOnly(on) {
+  document.body.classList.toggle('video-only', on)
+  fullscreenChanged()
+  if (on) revealExit()
+}
+// In full screen, show the exit button for a few seconds after entering and whenever the mouse moves.
+let revealTimer = null
+function revealExit() {
+  document.body.classList.add('show-exit')
+  clearTimeout(revealTimer)
+  revealTimer = setTimeout(() => document.body.classList.remove('show-exit'), 3000)
+}
+document.addEventListener('mousemove', () => { if (document.body.classList.contains('video-only')) revealExit() })
+function fullscreenChanged() {
+  const on = isFullscreen()
+  $('#player').classList.toggle('is-fullscreen', on)
+  $('#player-fullscreen').setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen')
+}
+$('#player-fullscreen').addEventListener('click', toggleFullscreen)
+$('#fs-exit').addEventListener('click', toggleFullscreen)
+// Recordings: single click plays/pauses, double click toggles full screen.
+let clickTimer = null
+video.addEventListener('click', () => {
+  if (state.player?.mode !== 'clip') return
+  clearTimeout(clickTimer)
+  clickTimer = setTimeout(togglePlay, 220)
+})
+video.addEventListener('dblclick', (e) => { e.preventDefault(); clearTimeout(clickTimer); toggleFullscreen() })
+document.addEventListener('fullscreenchange', fullscreenChanged)
+
+/** Called by the app inside its window: play this, then the window goes full screen. */
+async function playFullscreen({ mode, cameraId, eventId, time }) {
+  setTab(mode === 'clip' ? 'activity' : 'cameras')
+  if (mode === 'clip') {
+    const event = state.events.find((e) => e.id === eventId)
+    if (!event) return false
+    await openClip(event)
+    if (time > 0) {
+      const seek = () => { video.currentTime = time }
+      if (video.readyState >= 1) seek(); else video.addEventListener('loadedmetadata', seek, { once: true })
+    }
+  } else {
+    if (state.player?.mode !== 'live' || state.player.cameraId !== cameraId) await sleep(400) // let the popover's stream stop first
+    if (state.player?.mode !== 'live' || state.player.cameraId !== cameraId) openLive(cameraId)
+  }
+  setVideoOnly(true)
+  return true
+}
 window.addEventListener('pagehide', closePlayer)
 
 function renderLiveControls() {
@@ -637,12 +803,54 @@ $('#ctl-snap').addEventListener('click', () => {
   }
 })
 
-function download(href, name) {
+function download(href, name, ext = 'jpg') {
   const a = document.createElement('a')
   a.href = href
-  a.download = `${name} ${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')}.jpg`
+  a.download = `${name} ${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')}.${ext}`
   a.click()
 }
+
+// Share the recording: the menu bar app shows the macOS share menu (AirDrop, Messages, Mail…);
+// a browser uses the Web Share API where it can share files.
+const canShare = !!native || (typeof navigator.canShare === 'function' &&
+  navigator.canShare({ files: [new File([''], 'x.mp4', { type: 'video/mp4' })] }))
+$('#player-share').addEventListener('click', async () => {
+  const p = state.player
+  if (p?.mode !== 'clip') return
+  const btn = $('#player-share')
+  btn.classList.add('busy')
+  const url = `/api/events/${encodeURIComponent(p.event.id)}/recording.mp4?download=1`
+  try {
+    if (native) {
+      const r = btn.getBoundingClientRect()
+      const result = await nativeCall({ type: 'shareFile', path: url, rect: [r.left, r.top, r.width, r.height] })
+      if (result !== true) throw new Error(typeof result === 'string' ? result : 'Could not prepare the video.')
+    } else {
+      const res = await fetch(url, { credentials: 'same-origin' })
+      if (!res.ok) throw new Error('Could not load the recording.')
+      const name = decodeURIComponent((res.headers.get('content-disposition') || '').match(/filename\*=UTF-8''([^;]+)/)?.[1] || 'recording.mp4')
+      const file = new File([await res.blob()], name, { type: 'video/mp4' })
+      await navigator.share({ files: [file], title: name })
+    }
+  } catch (e) {
+    if (e?.name !== 'AbortError') setPlayerError(`Sharing failed. ${e.message || ''}`)
+  } finally {
+    btn.classList.remove('busy')
+  }
+})
+
+// Save the recording being played. The server names the file "<camera> <date> <time>.mp4".
+$('#player-save').addEventListener('click', () => {
+  const p = state.player
+  if (p?.mode !== 'clip') return
+  const btn = $('#player-save')
+  btn.classList.add('busy')
+  setTimeout(() => btn.classList.remove('busy'), 3000)
+  const a = document.createElement('a')
+  a.href = `/api/events/${encodeURIComponent(p.event.id)}/recording.mp4?download=1`
+  a.download = ''
+  a.click()
+})
 
 // ---------------------------------------------------------------------------
 // Layout and window
@@ -662,9 +870,14 @@ if (native) {
 // ---------------------------------------------------------------------------
 // Settings
 // ---------------------------------------------------------------------------
-$('#settings-btn').addEventListener('click', () => {
+function fillNotificationSettings() {
   $('#set-notify').checked = prefs.notify
   $('#set-notify-motion').checked = prefs.notifyMotion
+  $('#set-dot').checked = prefs.menuBarDot
+}
+$('#settings-btn').addEventListener('click', async () => {
+  await loadNativePrefs()
+  fillNotificationSettings()
   $('#set-refresh').value = String(prefs.refresh)
   const n = state.cameras.size
   $('#account-line').textContent = `Connected to Ring · ${n} camera${n === 1 ? '' : 's'}`
@@ -679,6 +892,7 @@ $('#set-notify').addEventListener('change', async (e) => {
   savePrefs()
 })
 $('#set-notify-motion').addEventListener('change', (e) => { prefs.notifyMotion = e.target.checked; savePrefs() })
+$('#set-dot').addEventListener('change', (e) => { prefs.menuBarDot = e.target.checked; savePrefs() })
 $('#set-refresh').addEventListener('change', (e) => { prefs.refresh = Number(e.target.value); savePrefs(); restartSnapshotTimer() })
 $('#signout-btn').addEventListener('click', async () => {
   if (!confirm('Sign out of Ring on this Mac?')) return
@@ -697,8 +911,17 @@ window.homebaseview = {
   openCamera: (id) => { if (!$('#view-main').hidden) { setTab('cameras'); openLive(Number(id)) } },
   showActivity: () => { closePlayer(); setTab('activity') },
   /** Called when the popover closes: stop streaming so the camera (and battery) can rest. */
-  hidden: () => closePlayer(),
+  hidden: () => { closePlayer(); settleSeenDots() },
   shown: () => { for (const id of state.cameras.keys()) refreshSnapshot(id) },
+  /** Called when notification settings change from the menu bar icon's right-click menu. */
+  prefsChanged: async () => { await loadNativePrefs(); fillNotificationSettings() },
+  /** True once signed in and cameras/events are loaded, so the app knows it can hand over playback. */
+  get ready() { return !$('#view-main').hidden && state.cameras.size > 0 },
+  playFullscreen: (args) => playFullscreen(args),
+  /** The window left full screen (Esc, the green button, or our exit button). */
+  fullscreenEnded: () => setVideoOnly(false),
+  /** The window went full screen by itself (green button): show only the video if something is playing. */
+  enterVideoOnly: () => { if (state.player) setVideoOnly(true) },
 }
 
 // ---------------------------------------------------------------------------
@@ -723,5 +946,8 @@ function dayLabel(iso) {
   return d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })
 }
 
-if (native) $('#notify-row').querySelector('small').textContent = 'Shown by the menu bar app'
+if (native) {
+  $('#notify-row').querySelector('small').textContent = 'Banner alerts for motion and the doorbell'
+  $('#dot-row').hidden = false
+}
 boot()

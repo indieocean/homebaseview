@@ -42,9 +42,11 @@
 | --- | --- |
 | 🎥 **Live view** | Low-latency video from any camera, with sound. Pop it out into a resizable window to keep watching. |
 | 🎙️ **Two-way talk** | Speak to visitors through the camera's speaker using your Mac's microphone. |
-| 🔔 **Instant alerts** | Native macOS notifications for doorbell presses and motion, with a snapshot attached. The menu bar icon turns red until you look. |
+| 🔔 **Instant alerts** | Native macOS notifications for doorbell presses and motion, with a snapshot attached. A red dot stays on the menu bar icon until you open the app. |
+| 🔕 **Your call on alerts** | Turn banners, motion alerts and the red dot on or off from Settings or the menu bar icon's right-click menu. |
 | 🧠 **Smart labels** | Ring's person, package, vehicle and animal detection, shown right in the activity log. |
-| 🎞️ **Clip playback** | Replay recordings from the last 24 hours. Requires a Ring Protect plan. |
+| 🎞️ **Clip playback** | Replay recordings from the last 24 hours, then save them to Downloads or share them with AirDrop, Messages, Mail and more. Requires a Ring Protect plan. |
+| ⛶ **Full screen** | Watch live video or a recording full screen with one click or a double-click. |
 | 💡 **Device controls** | Toggle floodlights, sound the siren, and turn motion detection on or off. |
 | 🔋 **Status at a glance** | Battery level, charging, offline and motion badges on every camera tile. |
 | 🌗 **Feels native** | Light and dark mode, reduced-motion support, Launch at Login, and a popover you can drag into its own window. |
@@ -103,6 +105,7 @@ flowchart LR
 
 - **Sign-in.** Your email, password and verification code go to Ring's OAuth endpoint. Only the resulting refresh token is saved, and Ring rotates it on every use.
 - **Events.** Ring's push notifications arrive in real time. The server also polls Ring's event history every few seconds as a backup, and merges duplicates.
+- **Recordings.** Clips stream through the local server, which forwards each byte-range request to Ring's signed download link. Ring's download host bakes the range into its redirects, so pointing the player at Ring directly would stall.
 - **Live view.** The camera streams to the server over WebRTC through Ring's signalling service. FFmpeg repackages it as a short rolling HLS playlist that the UI plays with [hls.js](https://github.com/video-dev/hls.js).
 - **Talk.** FFmpeg captures your default microphone and encodes Opus or G.711, depending on the camera. The audio goes back over the same WebRTC session.
 - **Battery friendly.** A stream stops when you close the viewer or the popover, or after 30 seconds with nobody watching.
@@ -115,10 +118,15 @@ flowchart LR
 | Watch a camera live | Click its tile |
 | Talk, light, siren, motion, save still | Buttons under the live video |
 | See what happened | **Activity** tab, then click an event to play its clip |
+| Control a recording | Click the video or press Space to play or pause, drag the scrubber, or press ← / → to skip 5 seconds |
+| Full screen | Full screen button in the player's top bar, or double-click the video. Press Esc to exit. |
+| Save or share a recording | Save (down arrow) or Share button in the player's top bar while a clip plays. Saved clips go to Downloads as `<camera> <date> <time>.mp4`. |
 | Switch between grid and large tiles | Layout button in the top bar |
 | Open a resizable window | Pop-out button in the top bar, or right-click the icon and choose **Open in Window** |
+| Clear the red dot | Open the popover or window. If the dot was showing, the app opens on **Activity**. |
+| Turn notifications on or off | Right-click the menu bar icon, then **Notifications**: Show Notifications, Alert on Motion, Red Dot on Menu Bar Icon, and a link to macOS Notification Settings. The same switches are in Settings. |
 | Launch at Login, server log, restart | Right-click the menu bar icon |
-| Notification and refresh settings | Settings button in the top bar |
+| Refresh interval and other settings | Settings button in the top bar |
 
 The first time you press **Talk**, macOS asks for microphone access for HomeBaseView.
 
@@ -195,7 +203,13 @@ Allow HomeBaseView in System Settings, Privacy & Security, Microphone. Then quit
 <details>
 <summary><b>No notifications</b></summary>
 
-Allow HomeBaseView in System Settings, Notifications. Push from Ring can be delayed. The history poll catches anything push misses, usually within Ring's own 20 to 60 second lag.
+Right-click the menu bar icon and check **Notifications**. If it says *Turned off in System Settings*, choose **macOS Notification Settings…** and allow HomeBaseView. Also make sure **Show Notifications** is checked, and **Alert on Motion** if you want motion alerts and not only doorbell presses. Push from Ring can be delayed. The history poll catches anything push misses, usually within Ring's own 20 to 60 second lag.
+</details>
+
+<details>
+<summary><b>A recording won't play</b></summary>
+
+Ring needs a minute or two after an event to finish processing the clip, and recordings need a Ring Protect plan. If the player says the recording isn't available, wait and try again.
 </details>
 
 <details>

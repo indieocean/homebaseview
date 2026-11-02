@@ -120,6 +120,16 @@
         <div id="player-sub"></div>
       </div>
       <span id="live-dot" class="live-pill" hidden>Live</span>
+      <button class="icon-btn" id="player-save" title="Save recording to Downloads" aria-label="Save recording" hidden>
+        <svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+      </button>
+      <button class="icon-btn" id="player-share" title="Share recording" aria-label="Share recording" hidden>
+        <svg viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>
+      </button>
+      <button class="icon-btn" id="player-fullscreen" title="Full screen (double-click the video)" aria-label="Full screen">
+        <svg viewBox="0 0 24 24" class="enter"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        <svg viewBox="0 0 24 24" class="exit"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+      </button>
     </header>
 
     <div class="player-body">
@@ -127,6 +137,22 @@
         <div class="video-frame">
           <video id="video" playsinline muted autoplay></video>
           <div id="video-status" class="video-status"><span class="spinner"></span><span class="text"></span></div>
+          <div id="clip-bar" class="clip-bar" hidden>
+            <button type="button" id="clip-play" aria-label="Play or pause">
+              <svg viewBox="0 0 24 24" class="play-ic"><path class="fill" d="M7 4.5v15l12.5-7.5z"/></svg>
+              <svg viewBox="0 0 24 24" class="pause-ic"><path class="fill" d="M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z"/></svg>
+            </button>
+            <span id="clip-time">0:00</span>
+            <input type="range" id="clip-seek" min="0" max="1000" value="0" step="1" aria-label="Seek">
+            <span id="clip-duration">0:00</span>
+            <button type="button" id="clip-mute" aria-label="Mute or unmute">
+              <svg viewBox="0 0 24 24" class="sound-ic"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+              <svg viewBox="0 0 24 24" class="muted-ic"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="m22 9-6 6m0-6 6 6"/></svg>
+            </button>
+          </div>
+          <button id="fs-exit" class="fs-exit" title="Exit full screen (Esc)" aria-label="Exit full screen">
+            <svg viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+          </button>
         </div>
       </div>
 
@@ -184,8 +210,12 @@
           <input type="checkbox" class="switch" id="set-notify">
         </label>
         <label class="row">
-          <span><b>Notify on motion</b><small>Doorbell presses always notify</small></span>
+          <span><b>Alert on motion</b><small>Banners and the red dot. Doorbell presses always alert.</small></span>
           <input type="checkbox" class="switch" id="set-notify-motion">
+        </label>
+        <label class="row" id="dot-row" hidden>
+          <span><b>Menu bar red dot</b><small>Marks new activity until you open HomeBaseView</small></span>
+          <input type="checkbox" class="switch" id="set-dot">
         </label>
         <label class="row">
           <span><b>Refresh stills</b><small>How often camera images update</small></span>

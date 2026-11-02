@@ -19,6 +19,7 @@ bus.setMaxListeners(50)
 let api = null
 let cameras = []
 let authExpired = false
+let connected = false // true once the camera list has loaded, not merely when a token exists
 let subscriptions = []
 let pollTimer = null
 let pollInFlight = null
@@ -127,7 +128,12 @@ function markAuthExpired() {
 }
 
 export function authStatus() {
-  return { authenticated: api !== null && !authExpired, authExpired, hasToken: !!readTextFile(config.ringTokenPath) }
+  return {
+    authenticated: api !== null && connected && !authExpired,
+    connecting: api !== null && !connected && !authExpired,
+    authExpired,
+    hasToken: !!readTextFile(config.ringTokenPath),
+  }
 }
 
 function saveRingToken(token) {
@@ -159,6 +165,7 @@ export async function initRing() {
     throw err
   }
   authExpired = false
+  connected = true
   console.log(`[ring] Connected. ${cameras.length} camera(s).`)
 
   for (const cam of cameras) {
@@ -196,6 +203,7 @@ function teardownRing() {
   subscriptions = []
   if (api) { try { api.disconnect() } catch { /* ignore */ } }
   api = null
+  connected = false
   cameras = []
   lastSeenEventAt.clear()
 }

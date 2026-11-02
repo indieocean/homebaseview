@@ -7,7 +7,7 @@ import { config } from './config.js'
 import { setupLogging } from './log.js'
 import { emptyDir, ensurePrivateDir, readTextFile, writePrivateFile } from './fsutil.js'
 import { createApp } from './routes.js'
-import { initRing, shutdownRing } from './ring.js'
+import { authStatus, initRing, shutdownRing } from './ring.js'
 import { stopAllStreams } from './streams.js'
 
 process.umask(0o077) // everything we (and FFmpeg) write is owner-only
@@ -43,7 +43,16 @@ server.on('error', (err) => {
   process.exit(1)
 })
 
-initRing().catch((err) => console.error('[ring] init failed:', err.message))
+// Retry if Ring can't be reached at launch (e.g. no network yet after login), unless the session was rejected.
+async function connectRing(attempt = 1) {
+  try {
+    await initRing()
+  } catch (err) {
+    console.error(`[ring] init failed (attempt ${attempt}):`, err.message)
+    if (!authStatus().authExpired) setTimeout(() => connectRing(attempt + 1), Math.min(60_000, 5000 * attempt)).unref()
+  }
+}
+connectRing()
 
 // If launched by the menu bar app, exit when it does (even if it was force-quit).
 const parentPid = Number(process.env.HOMEBASEVIEW_PARENT_PID)

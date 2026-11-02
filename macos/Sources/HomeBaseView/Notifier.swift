@@ -10,16 +10,42 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     var onEvent: ((_ cameraId: Int, _ kind: String) -> Void)?
     var onOpen: ((_ cameraId: Int) -> Void)?
 
-    static var enabled: Bool { UserDefaults.standard.object(forKey: "notify") as? Bool ?? true }
-    static var motionEnabled: Bool { UserDefaults.standard.object(forKey: "notifyMotion") as? Bool ?? true }
+    // MARK: Preferences (the menu bar app is the source of truth; the web UI reads and writes them over the bridge)
+
+    static let prefKeys = ["notify", "notifyMotion", "menuBarDot"]
+    static func pref(_ key: String) -> Bool { UserDefaults.standard.object(forKey: key) as? Bool ?? true }
+    static func setPref(_ key: String, _ value: Bool) {
+        guard prefKeys.contains(key) else { return }
+        UserDefaults.standard.set(value, forKey: key)
+    }
+    static var allPrefs: [String: Bool] { Dictionary(uniqueKeysWithValues: prefKeys.map { ($0, pref($0)) }) }
+
+    /// Banner notifications on.
+    static var enabled: Bool { pref("notify") }
+    /// Motion (not just doorbell presses) counts as an alert — for banners and the menu bar dot.
+    static var motionEnabled: Bool { pref("notifyMotion") }
+    /// Show a red dot on the menu bar icon until the app is opened.
+    static var dotEnabled: Bool { pref("menuBarDot") }
+    static func isAlert(kind: String) -> Bool { kind == "ding" || motionEnabled }
+
+    /// Whether macOS lets us show notifications at all (updated on launch and when the menu opens).
+    private(set) var systemAuthorization: UNAuthorizationStatus = .notDetermined
+
+    func refreshAuthorization() {
+        UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
+            let status = settings.authorizationStatus
+            Task { @MainActor in self?.systemAuthorization = status }
+        }
+    }
 
     override init() {
         super.init()
         let center = UNUserNotificationCenter.current()
         center.delegate = self
-        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
+        center.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, error in
             if let error { NSLog("[HomeBaseView] notification permission error: \(error.localizedDescription)") }
             NSLog("[HomeBaseView] notifications \(granted ? "allowed" : "denied")")
+            Task { @MainActor in self?.refreshAuthorization() }
         }
     }
 
@@ -82,7 +108,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     }
 
     private func post(_ e: RingEvent) {
-        guard Self.enabled, e.kind == "ding" || Self.motionEnabled else { return }
+        guard Self.enabled, Self.isAlert(kind: e.kind) else { return }
         let content = UNMutableNotificationContent()
         content.title = e.cameraName
         content.body = label(e)
