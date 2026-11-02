@@ -14,7 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             button.image = Self.icon(alert: false)
-            button.toolTip = "HomeView"
+            button.toolTip = "HomeBaseView"
             button.action = #selector(statusClicked(_:))
             button.target = self
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -31,7 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         notifier.onEvent = { [weak self] _, _ in self?.flashIcon() }
         notifier.onOpen = { [weak self] cameraId in
             self?.showPopover()
-            self?.web.call("window.homeview && window.homeview.openCamera(\(cameraId))")
+            self?.web.call("window.homebaseview && window.homebaseview.openCamera(\(cameraId))")
         }
 
         server.onReady = { [weak self] token in
@@ -53,8 +53,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     private static func icon(alert: Bool) -> NSImage? {
         let name = alert ? "video.doorbell.fill" : "video.doorbell"
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: "HomeView")
-            ?? NSImage(systemSymbolName: alert ? "video.fill" : "video", accessibilityDescription: "HomeView")
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: "HomeBaseView")
+            ?? NSImage(systemSymbolName: alert ? "video.fill" : "video", accessibilityDescription: "HomeBaseView")
         image?.isTemplate = !alert
         return alert ? image?.tinted(.systemRed) : image
     }
@@ -88,12 +88,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     func popoverDidShow(_ notification: Notification) {
-        web.call("window.homeview && window.homeview.shown()")
+        web.call("window.homebaseview && window.homebaseview.shown()")
     }
 
     func popoverDidClose(_ notification: Notification) {
         // Stop any live view so the camera isn't streaming to a hidden window.
-        web.call("window.homeview && window.homeview.hidden()")
+        web.call("window.homebaseview && window.homebaseview.hidden()")
     }
 
     /// Drag the popover away from the menu bar to keep it open as a floating window.
@@ -103,7 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     private func showMenu() {
         let menu = NSMenu()
-        menu.addItem(withTitle: "Open HomeView", action: #selector(openPopover), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "Open HomeBaseView", action: #selector(openPopover), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Open in Browser", action: #selector(openInBrowser), keyEquivalent: "").target = self
         menu.addItem(.separator())
         let login = menu.addItem(withTitle: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
@@ -112,7 +112,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         menu.addItem(withTitle: "Show Server Log", action: #selector(showLog), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Restart Server", action: #selector(restartServer), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit HomeView", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit HomeBaseView", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
         statusItem.menu = nil // keep left-click for the popover

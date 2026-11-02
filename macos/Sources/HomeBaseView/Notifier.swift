@@ -18,8 +18,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let center = UNUserNotificationCenter.current()
         center.delegate = self
         center.requestAuthorization(options: [.alert, .sound]) { granted, error in
-            if let error { NSLog("[HomeView] notification permission error: \(error.localizedDescription)") }
-            NSLog("[HomeView] notifications \(granted ? "allowed" : "denied")")
+            if let error { NSLog("[HomeBaseView] notification permission error: \(error.localizedDescription)") }
+            NSLog("[HomeBaseView] notifications \(granted ? "allowed" : "denied")")
         }
     }
 
@@ -53,7 +53,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         var comps = URLComponents(url: ServerManager.baseURL.appendingPathComponent("api/events"), resolvingAgainstBaseURL: false)!
         comps.queryItems = [URLQueryItem(name: "after", value: String(max(lastSeq, 0)))]
         var req = URLRequest(url: comps.url!, timeoutInterval: 5)
-        req.setValue(token, forHTTPHeaderField: "X-HomeView-Token")
+        req.setValue(token, forHTTPHeaderField: "X-HomeBaseView-Token")
         URLSession.shared.dataTask(with: req) { [weak self] data, _, _ in
             let events = data.flatMap { try? JSONDecoder().decode([RingEvent].self, from: $0) } ?? []
             Task { @MainActor in
@@ -103,10 +103,10 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     private func fetchSnapshot(cameraId: Int, done: @escaping @Sendable (URL?) -> Void) {
         guard let token else { done(nil); return }
         var req = URLRequest(url: ServerManager.baseURL.appendingPathComponent("api/cameras/\(cameraId)/snapshot"), timeoutInterval: 6)
-        req.setValue(token, forHTTPHeaderField: "X-HomeView-Token")
+        req.setValue(token, forHTTPHeaderField: "X-HomeBaseView-Token")
         URLSession.shared.dataTask(with: req) { data, response, _ in
             guard let data, (response as? HTTPURLResponse)?.statusCode == 200 else { done(nil); return }
-            let file = FileManager.default.temporaryDirectory.appendingPathComponent("homeview-\(UUID().uuidString).jpg")
+            let file = FileManager.default.temporaryDirectory.appendingPathComponent("homebaseview-\(UUID().uuidString).jpg")
             do { try data.write(to: file, options: .completeFileProtection); done(file) } catch { done(nil) }
         }.resume()
     }

@@ -4,7 +4,7 @@ import { ensurePrivateDir } from './fsutil.js'
 
 const MAX_BYTES = 1_000_000
 
-/** Mirror console output to ~/.homeview/server.log (rotated, owner-only). */
+/** Mirror console output to ~/.homebaseview/server.log (rotated, owner-only). */
 export function setupLogging() {
   ensurePrivateDir(config.dataDir)
   try {

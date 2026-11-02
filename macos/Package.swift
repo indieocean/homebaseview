@@ -2,9 +2,9 @@
 import PackageDescription
 
 let package = Package(
-    name: "HomeView",
+    name: "HomeBaseView",
     platforms: [.macOS(.v14)],
     targets: [
-        .executableTarget(name: "HomeView", path: "Sources/HomeView")
+        .executableTarget(name: "HomeBaseView", path: "Sources/HomeBaseView")
     ]
 )

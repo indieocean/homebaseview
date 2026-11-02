@@ -6,7 +6,7 @@ import * as ring from './ring.js'
 import * as streams from './streams.js'
 import { getSnapshot } from './snapshots.js'
 
-const COOKIE = 'hv_session'
+const COOKIE = 'hbv_session'
 
 function safeEqual(a, b) {
   const x = Buffer.from(String(a))
@@ -49,7 +49,7 @@ export function createApp(sessionToken) {
 
   const api = express.Router()
   api.use((req, res, next) => {
-    const token = req.headers['x-homeview-token'] || readCookie(req, COOKIE)
+    const token = req.headers['x-homebaseview-token'] || readCookie(req, COOKIE)
     if (!token || !safeEqual(token, sessionToken)) return res.status(401).json({ error: 'unauthorized' })
     next()
   })

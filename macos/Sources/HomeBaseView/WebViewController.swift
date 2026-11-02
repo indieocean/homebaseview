@@ -2,7 +2,7 @@ import AppKit
 import AVFoundation
 import WebKit
 
-/// Hosts the HomeView web UI and bridges the few things a web page can't do on its own.
+/// Hosts the HomeBaseView web UI and bridges the few things a web page can't do on its own.
 @MainActor
 final class WebViewController: NSViewController, WKScriptMessageHandlerWithReply, WKUIDelegate, WKNavigationDelegate, WKDownloadDelegate {
     private(set) var webView: WKWebView!
@@ -12,14 +12,14 @@ final class WebViewController: NSViewController, WKScriptMessageHandlerWithReply
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default() // keeps the session cookie between launches
         config.mediaTypesRequiringUserActionForPlayback = []
-        config.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "homeview")
+        config.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "homebaseview")
 
         webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 420, height: 640), configuration: config)
         webView.uiDelegate = self
         webView.navigationDelegate = self
         webView.setValue(false, forKey: "drawsBackground")
         view = webView
-        showMessage("Starting HomeView…")
+        showMessage("Starting HomeBaseView…")
     }
 
     func load(token: String) {
@@ -124,6 +124,6 @@ final class WebViewController: NSViewController, WKScriptMessageHandlerWithReply
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        showMessage("Can't reach the HomeView server. It will retry automatically.")
+        showMessage("Can't reach the HomeBaseView server. It will retry automatically.")
     }
 }

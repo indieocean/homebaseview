@@ -9,8 +9,8 @@ macos/*.iconset/
 *.xcodeproj/xcuserdata/
 DerivedData/
 
-# Local runtime data (the app stores this in ~/.homeview, but never commit it if redirected here)
-.homeview/
+# Local runtime data (the app stores this in ~/.homebaseview, but never commit it if redirected here)
+.homebaseview/
 hls/
 *.log
 ring-token

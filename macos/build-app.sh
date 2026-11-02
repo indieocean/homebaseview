@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Builds HomeView.app: the Swift menu bar shell + this Node server + a copy of Node.
+# Builds HomeBaseView.app: the Swift menu bar shell + this Node server + a copy of Node.
 # Usage: bash macos/build-app.sh [--install]   (--install copies it to /Applications)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
-APP="$ROOT/macos/build/HomeView.app"
+APP="$ROOT/macos/build/HomeBaseView.app"
 
 echo "==> Installing server dependencies"
 npm install --omit=dev --no-audit --no-fund --silent
@@ -15,7 +15,7 @@ swift build -c release --package-path macos
 echo "==> Assembling $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/app"
-cp "macos/.build/release/HomeView" "$APP/Contents/MacOS/HomeView"
+cp "macos/.build/release/HomeBaseView" "$APP/Contents/MacOS/HomeBaseView"
 cp macos/Info.plist "$APP/Contents/Info.plist"
 [ -f macos/AppIcon.icns ] && cp macos/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
@@ -31,10 +31,10 @@ codesign --force --sign - "$APP"
 
 if [ "${1:-}" = "--install" ]; then
   echo "==> Installing to /Applications"
-  pkill -x HomeView 2>/dev/null && sleep 1 || true
-  rm -rf /Applications/HomeView.app
-  ditto "$APP" /Applications/HomeView.app
-  echo "Done. Launch it with: open /Applications/HomeView.app"
+  pkill -x HomeBaseView 2>/dev/null && sleep 1 || true
+  rm -rf /Applications/HomeBaseView.app
+  ditto "$APP" /Applications/HomeBaseView.app
+  echo "Done. Launch it with: open /Applications/HomeBaseView.app"
 else
   echo "Done. Launch it with: open \"$APP\"  (or rerun with --install)"
 fi

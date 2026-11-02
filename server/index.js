@@ -1,5 +1,7 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { execFile } from 'node:child_process'
 import { config } from './config.js'
 import { setupLogging } from './log.js'
@@ -9,6 +11,12 @@ import { initRing, shutdownRing } from './ring.js'
 import { stopAllStreams } from './streams.js'
 
 process.umask(0o077) // everything we (and FFmpeg) write is owner-only
+
+// One-time move of data saved under the app's previous name (HomeView).
+const legacyDir = path.join(os.homedir(), '.homeview')
+if (!process.env.HOMEBASEVIEW_DATA_DIR && !fs.existsSync(config.dataDir) && fs.existsSync(legacyDir)) {
+  fs.renameSync(legacyDir, config.dataDir)
+}
 setupLogging()
 ensurePrivateDir(config.dataDir)
 ensurePrivateDir(config.hlsDir)
@@ -24,13 +32,13 @@ if (!sessionToken || process.argv.includes('--new-token')) {
 const app = createApp(sessionToken)
 const server = app.listen(config.port, config.host, () => {
   const url = `http://${config.host}:${config.port}/?token=${sessionToken}`
-  console.log(`[server] HomeView running. Open: ${url}`)
+  console.log(`[server] HomeBaseView running. Open: ${url}`)
   fs.writeFileSync(`${config.dataDir}/server.pid`, String(process.pid), { mode: 0o600 })
   if (process.argv.includes('--open')) execFile('open', [url])
 })
 server.on('error', (err) => {
   console.error(err.code === 'EADDRINUSE'
-    ? `[server] Port ${config.port} is already in use. Is HomeView already running?`
+    ? `[server] Port ${config.port} is already in use. Is HomeBaseView already running?`
     : `[server] Failed to start: ${err.message}`)
   process.exit(1)
 })
@@ -38,7 +46,7 @@ server.on('error', (err) => {
 initRing().catch((err) => console.error('[ring] init failed:', err.message))
 
 // If launched by the menu bar app, exit when it does (even if it was force-quit).
-const parentPid = Number(process.env.HOMEVIEW_PARENT_PID)
+const parentPid = Number(process.env.HOMEBASEVIEW_PARENT_PID)
 if (parentPid) {
   setInterval(() => {
     try { process.kill(parentPid, 0) } catch { shutdown('parent exited') }

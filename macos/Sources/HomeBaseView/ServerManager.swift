@@ -3,9 +3,9 @@ import Foundation
 /// Launches the bundled Node server, waits until it answers, and restarts it if it crashes.
 @MainActor
 final class ServerManager {
-    static let port = Int(ProcessInfo.processInfo.environment["HOMEVIEW_PORT"] ?? "") ?? 18700
+    static let port = Int(ProcessInfo.processInfo.environment["HOMEBASEVIEW_PORT"] ?? "") ?? 18700
     static let baseURL = URL(string: "http://127.0.0.1:\(port)")!
-    static let dataDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".homeview")
+    static let dataDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".homebaseview")
     static let logURL = dataDir.appendingPathComponent("server.log")
 
     private var process: Process?
@@ -18,7 +18,7 @@ final class ServerManager {
 
     /// Resources/app (the Node project) and Resources/node (the runtime), or a dev checkout.
     private var appDir: URL {
-        if let env = ProcessInfo.processInfo.environment["HOMEVIEW_ROOT"] { return URL(fileURLWithPath: env) }
+        if let env = ProcessInfo.processInfo.environment["HOMEBASEVIEW_ROOT"] { return URL(fileURLWithPath: env) }
         return Bundle.main.resourceURL!.appendingPathComponent("app")
     }
 
@@ -44,8 +44,8 @@ final class ServerManager {
         p.arguments = [script.path]
         p.currentDirectoryURL = appDir
         var env = ProcessInfo.processInfo.environment
-        env["HOMEVIEW_PARENT_PID"] = String(ProcessInfo.processInfo.processIdentifier)
-        env["HOMEVIEW_PORT"] = String(Self.port)
+        env["HOMEBASEVIEW_PARENT_PID"] = String(ProcessInfo.processInfo.processIdentifier)
+        env["HOMEBASEVIEW_PORT"] = String(Self.port)
         p.environment = env
         p.standardOutput = FileHandle.nullDevice // the server writes its own log file
         p.standardError = FileHandle.nullDevice
@@ -55,7 +55,7 @@ final class ServerManager {
         do {
             try p.run()
             process = p
-            NSLog("[HomeView] server started, pid \(p.processIdentifier)")
+            NSLog("[HomeBaseView] server started, pid \(p.processIdentifier)")
             waitUntilReady()
         } catch {
             onFailure?("Could not start the server: \(error.localizedDescription)")
@@ -83,7 +83,7 @@ final class ServerManager {
         process = nil
         token = nil
         if stopping { return }
-        NSLog("[HomeView] server exited with code \(proc.terminationStatus)")
+        NSLog("[HomeBaseView] server exited with code \(proc.terminationStatus)")
         restartTimes = restartTimes.filter { $0.timeIntervalSinceNow > -120 } + [Date()]
         if restartTimes.count > 5 {
             onFailure?("The server keeps crashing. See the log for details.")
@@ -102,7 +102,7 @@ final class ServerManager {
         var name = [CChar](repeating: 0, count: 1024)
         proc_name(pid, &name, UInt32(name.count))
         if String(cString: name).contains("node") {
-            NSLog("[HomeView] stopping stale server \(pid)")
+            NSLog("[HomeBaseView] stopping stale server \(pid)")
             kill(pid, SIGTERM)
             usleep(800_000)
         }
@@ -118,7 +118,7 @@ final class ServerManager {
             return
         }
         var req = URLRequest(url: Self.baseURL.appendingPathComponent("api/health"), timeoutInterval: 2)
-        req.setValue(token, forHTTPHeaderField: "X-HomeView-Token")
+        req.setValue(token, forHTTPHeaderField: "X-HomeBaseView-Token")
         URLSession.shared.dataTask(with: req) { [weak self] _, response, _ in
             let ok = (response as? HTTPURLResponse)?.statusCode == 200
             Task { @MainActor in

@@ -1,5 +1,5 @@
 {
-  "name": "homeview",
+  "name": "homebaseview",
   "version": "0.1.0",
   "private": true,
   "description": "Personal Ring camera viewer: local server + web UI + macOS menu bar app",

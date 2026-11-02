@@ -1,8 +1,8 @@
 'use strict'
 
 const $ = (sel) => document.querySelector(sel)
-// Present when running inside the HomeView menu bar app (WKWebView).
-const native = window.webkit?.messageHandlers?.homeview ?? null
+// Present when running inside the HomeBaseView menu bar app (WKWebView).
+const native = window.webkit?.messageHandlers?.homebaseview ?? null
 const nativeCall = async (msg) => {
   if (!native) return null
   try { return await native.postMessage(msg) } catch { return null }
@@ -13,10 +13,10 @@ const nativeCall = async (msg) => {
 // ---------------------------------------------------------------------------
 const prefs = (() => {
   const defaults = { notify: true, notifyMotion: true, refresh: 30, lastSeenSeq: 0 }
-  try { return { ...defaults, ...JSON.parse(localStorage.getItem('homeview-prefs') || '{}') } } catch { return defaults }
+  try { return { ...defaults, ...JSON.parse(localStorage.getItem('homebaseview-prefs') || '{}') } } catch { return defaults }
 })()
 function savePrefs() {
-  try { localStorage.setItem('homeview-prefs', JSON.stringify(prefs)) } catch { /* private mode */ }
+  try { localStorage.setItem('homebaseview-prefs', JSON.stringify(prefs)) } catch { /* private mode */ }
   nativeCall({ type: 'prefs', notify: prefs.notify, notifyMotion: prefs.notifyMotion })
 }
 
@@ -531,7 +531,7 @@ $('#ctl-talk').addEventListener('click', async () => {
     } else {
       if (native) {
         const granted = await nativeCall({ type: 'requestMic' })
-        if (granted === false) throw new Error('Microphone access is blocked. Allow HomeView in System Settings > Privacy & Security > Microphone.')
+        if (granted === false) throw new Error('Microphone access is blocked. Allow HomeBaseView in System Settings > Privacy & Security > Microphone.')
       }
       const r = await api(`/cameras/${p.cameraId}/talk/start`, { method: 'POST' })
       if (!r.ok) throw new Error(r.error)
@@ -635,7 +635,7 @@ $('#signout-btn').addEventListener('click', async () => {
 // ---------------------------------------------------------------------------
 // Hooks for the menu bar app
 // ---------------------------------------------------------------------------
-window.homeview = {
+window.homebaseview = {
   openCamera: (id) => { if (!$('#view-main').hidden) { setTab('cameras'); openLive(Number(id)) } },
   showActivity: () => { closePlayer(); setTab('activity') },
   /** Called when the popover closes: stop streaming so the camera (and battery) can rest. */

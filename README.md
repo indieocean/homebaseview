@@ -1,4 +1,4 @@
-# HomeView
+# HomeBaseView
 
 A personal Ring camera viewer for macOS. It lives in the menu bar and gives you:
 
@@ -17,16 +17,16 @@ for personal use only.
 ## How it works
 
 ```
-HomeView.app (Swift menu bar shell)
+HomeBaseView.app (Swift menu bar shell)
  ├─ starts ─▶ Node server on 127.0.0.1:18700 (server/)
  │             ├─ ring-client-api ─▶ Ring cloud (OAuth, REST, push notifications)
- │             ├─ WebRTC live view ─▶ FFmpeg ─▶ HLS segments in ~/.homeview/hls
+ │             ├─ WebRTC live view ─▶ FFmpeg ─▶ HLS segments in ~/.homebaseview/hls
  │             └─ FFmpeg mic capture ─▶ WebRTC return audio (two-way talk)
  ├─ shows ──▶ web UI (web/) in a popover
  └─ polls ──▶ /api/events for native notifications
 ```
 
-All files live in `~/.homeview`, readable only by you:
+All files live in `~/.homebaseview`, readable only by you:
 
 | File | Purpose |
 | --- | --- |
@@ -45,8 +45,8 @@ Requires Node 20 or newer and Xcode command line tools.
 
 ```sh
 npm install
-npm run app            # builds macos/build/HomeView.app
-open macos/build/HomeView.app
+npm run app            # builds macos/build/HomeBaseView.app
+open macos/build/HomeBaseView.app
 
 # or build and copy to /Applications in one step
 bash macos/build-app.sh --install
@@ -57,7 +57,7 @@ Ring then asks for a verification code. Right-click the icon for Launch at Login
 Open in Browser, the server log, and Restart Server. Drag the popover away from the
 menu bar to keep it open as a floating window.
 
-The first time you press Talk, macOS asks for microphone permission for HomeView.
+The first time you press Talk, macOS asks for microphone permission for HomeBaseView.
 
 ## Run without the menu bar app
 
@@ -74,14 +74,14 @@ notifications, which you can turn on in Settings.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `HOMEVIEW_PORT` | `18700` | Local server port |
-| `HOMEVIEW_POLL_MS` | `5000` | How often to poll Ring event history as a backup for push |
-| `HOMEVIEW_CLIENT_NAME` | `HomeView` | Name shown in Ring app > Control Center > Authorized Client Devices |
-| `HOMEVIEW_DATA_DIR` | `~/.homeview` | Where tokens, logs and segments are stored |
-| `HOMEVIEW_VERBOSE` | unset | Set to `1` for ring-client-api debug logging |
+| `HOMEBASEVIEW_PORT` | `18700` | Local server port |
+| `HOMEBASEVIEW_POLL_MS` | `5000` | How often to poll Ring event history as a backup for push |
+| `HOMEBASEVIEW_CLIENT_NAME` | `HomeBaseView` | Name shown in Ring app > Control Center > Authorized Client Devices |
+| `HOMEBASEVIEW_DATA_DIR` | `~/.homebaseview` | Where tokens, logs and segments are stored |
+| `HOMEBASEVIEW_VERBOSE` | unset | Set to `1` for ring-client-api debug logging |
 
 Run `npm start -- --new-token` to rotate the session token. Signing out in Settings
-deletes the Ring token. You can also revoke HomeView from the Ring app's Control Center.
+deletes the Ring token. You can also revoke HomeBaseView from the Ring app's Control Center.
 
 ## Notes
 
