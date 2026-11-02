@@ -1,0 +1,230 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-label="HomeBaseView: your Ring cameras, live in the macOS menu bar">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#090b10"/>
+      <stop offset="1" stop-color="#0f1322"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0.18" cy="0.15" r="0.55">
+      <stop offset="0" stop-color="#6a7dff" stop-opacity=".30"/>
+      <stop offset="1" stop-color="#6a7dff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.82" cy="0.95" r="0.5">
+      <stop offset="0" stop-color="#1fc8e8" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#1fc8e8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6a7dff"/>
+      <stop offset="1" stop-color="#1fc8e8"/>
+    </linearGradient>
+    <linearGradient id="brandText" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7d8dff"/>
+      <stop offset="1" stop-color="#2fd3ef"/>
+    </linearGradient>
+    <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="1.5" cy="1.5" r="1.1" fill="#ffffff" fill-opacity=".06"/>
+    </pattern>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="1"/>
+      <stop offset=".55" stop-color="#000" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="dotsMask"><rect width="1280" height="420" fill="url(#fadeMask)"/></mask>
+    <linearGradient id="fadeMask" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity=".25"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="1"/>
+    </linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset=".6" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".7"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000" flood-opacity=".55"/>
+    </filter>
+    <filter id="logoGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#6a7dff" flood-opacity=".55"/>
+    </filter>
+    <filter id="blur6"><feGaussianBlur stdDeviation="6"/></filter>
+
+    <!-- tile scenes -->
+    <linearGradient id="skyDusk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34407a"/><stop offset="1" stop-color="#c77a62"/></linearGradient>
+    <linearGradient id="skyNight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1428"/><stop offset="1" stop-color="#22386a"/></linearGradient>
+    <linearGradient id="skyDawn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b4955"/><stop offset="1" stop-color="#7cbcb4"/></linearGradient>
+    <linearGradient id="skySunset" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2042"/><stop offset="1" stop-color="#e3995a"/></linearGradient>
+    <radialGradient id="warm"><stop offset="0" stop-color="#ffd27a" stop-opacity=".9"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
+    <radialGradient id="beam"><stop offset="0" stop-color="#fff6d8" stop-opacity=".85"/><stop offset="1" stop-color="#fff6d8" stop-opacity="0"/></radialGradient>
+    <clipPath id="t1"><rect x="0" y="0" width="180" height="112" rx="10"/></clipPath>
+  </defs>
+
+  <!-- background -->
+  <rect width="1280" height="420" fill="url(#bg)"/>
+  <rect width="1280" height="420" fill="url(#glowA)"/>
+  <rect width="1280" height="420" fill="url(#glowB)"/>
+  <rect width="1280" height="420" fill="url(#dots)" mask="url(#dotsMask)"/>
+
+  <!-- fake macOS menu bar (right side) -->
+  <g font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif">
+    <rect x="760" y="0" width="520" height="30" fill="#ffffff" fill-opacity=".045"/>
+    <g fill="none" stroke="#c9cfdb" stroke-opacity=".55" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <!-- wifi -->
+      <path d="M1176 13a10 10 0 0 1 13 0M1179 16.5a5.5 5.5 0 0 1 7 0"/>
+      <circle cx="1182.5" cy="20" r=".9" fill="#c9cfdb"/>
+      <!-- battery -->
+      <rect x="1138" y="10" width="20" height="10" rx="2.5"/>
+      <path d="M1160.5 13.5v3"/>
+    </g>
+    <rect x="1140" y="12" width="13" height="6" rx="1.2" fill="#c9cfdb" fill-opacity=".55"/>
+    <text x="1268" y="20" font-size="12.5" fill="#c9cfdb" fill-opacity=".75" text-anchor="end">9:41</text>
+    <!-- HomeBaseView menu bar icon, highlighted -->
+    <rect x="1094" y="4" width="30" height="22" rx="6" fill="#ffffff" fill-opacity=".14"/>
+    <g fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" transform="translate(1100 6)">
+      <path d="M2.8 8.2 9 3l6.2 5.2V14a1.3 1.3 0 0 1-1.3 1.3H4.1A1.3 1.3 0 0 1 2.8 14Z"/>
+      <circle cx="9" cy="10.7" r="2.7"/>
+    </g>
+    <circle cx="1109" cy="16.7" r=".9" fill="#ffffff"/>
+    <circle cx="1121" cy="8" r="3.2" fill="#ff4d5e"/>
+  </g>
+
+  <!-- popover -->
+  <g filter="url(#soft)">
+    <path d="M1100 44 1109 35 1118 44Z" fill="#141821"/>
+    <rect x="812" y="44" width="404" height="320" rx="18" fill="#141821"/>
+  </g>
+  <rect x="812.5" y="44.5" width="403" height="319" rx="17.5" fill="none" stroke="#ffffff" stroke-opacity=".08"/>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif">
+    <!-- popover top bar -->
+    <g transform="translate(828 60)">
+      <rect width="22" height="22" rx="5.5" fill="url(#brand)"/>
+      <g fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" transform="scale(.34375)">
+        <path d="M14.5 29.5 32 15.5l17.5 14V47a3.5 3.5 0 0 1-3.5 3.5H18a3.5 3.5 0 0 1-3.5-3.5Z" stroke-width="4.4"/>
+        <circle cx="32" cy="36" r="7.5" stroke-width="4"/>
+      </g>
+    </g>
+    <text x="858" y="76" font-size="14" font-weight="700" fill="#f2f4f8">HomeBase<tspan fill="url(#brandText)">View</tspan></text>
+    <rect x="1040" y="59" width="160" height="26" rx="8" fill="#1b2029" stroke="#ffffff" stroke-opacity=".07"/>
+    <rect x="1042" y="61" width="78" height="22" rx="6.5" fill="#262c38"/>
+    <text x="1081" y="76" font-size="11.5" font-weight="600" fill="#f2f4f8" text-anchor="middle">Cameras</text>
+    <text x="1152" y="76" font-size="11.5" fill="#8b94a7" text-anchor="middle">Activity</text>
+    <circle cx="1188" cy="72" r="6.5" fill="#ff4d5e"/>
+    <text x="1188" y="75.8" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+    <line x1="812" y1="98" x2="1216" y2="98" stroke="#ffffff" stroke-opacity=".06"/>
+
+    <!-- tile 1: Front Door, dusk, motion -->
+    <g transform="translate(828 112)">
+      <g clip-path="url(#t1)">
+        <rect width="180" height="112" fill="url(#skyDusk)"/>
+        <rect x="0" y="34" width="180" height="78" fill="#272c43"/>
+        <rect x="0" y="34" width="180" height="5" fill="#1d2134"/>
+        <rect x="74" y="50" width="32" height="62" rx="2" fill="#6c4a3a"/>
+        <rect x="78" y="55" width="24" height="22" rx="1.5" fill="#7d5745"/>
+        <circle cx="100" cy="86" r="1.8" fill="#e9c27a"/>
+        <circle cx="122" cy="58" r="22" fill="url(#warm)"/>
+        <rect x="119" y="54" width="6" height="8" rx="2" fill="#ffe2a0"/>
+        <rect x="60" y="104" width="60" height="8" fill="#3a3f57"/>
+        <rect x="24" y="52" width="30" height="26" rx="2" fill="#f5c46e" fill-opacity=".55"/>
+        <path d="M39 52v26M24 65h30" stroke="#272c43" stroke-width="2"/>
+        <rect width="180" height="112" fill="url(#shade)"/>
+      </g>
+      <rect x="9" y="9" width="62" height="19" rx="9.5" fill="#ff4d5e"/>
+      <circle cx="19" cy="18.5" r="3" fill="#fff"/>
+      <text x="26" y="22.5" font-size="10.5" font-weight="700" fill="#fff">Motion</text>
+      <rect x="131" y="9" width="40" height="19" rx="9.5" fill="#0f1219" fill-opacity=".62"/>
+      <text x="151" y="22.5" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">82%</text>
+      <text x="11" y="92" font-size="13" font-weight="700" fill="#fff">Front Door</text>
+      <text x="11" y="105" font-size="9.5" fill="#ffffff" fill-opacity=".72">Updated just now</text>
+    </g>
+
+    <!-- tile 2: Driveway, night, live -->
+    <g transform="translate(1020 112)">
+      <g clip-path="url(#t1)">
+        <rect width="180" height="112" fill="url(#skyNight)"/>
+        <circle cx="146" cy="24" r="9" fill="#e8ecf8" fill-opacity=".9"/>
+        <circle cx="141" cy="21" r="8" fill="#182a52"/>
+        <circle cx="30" cy="16" r=".9" fill="#fff"/><circle cx="62" cy="28" r=".7" fill="#fff"/><circle cx="96" cy="12" r=".8" fill="#fff"/><circle cx="118" cy="40" r=".6" fill="#fff"/>
+        <path d="M0 74 180 62V112H0Z" fill="#161b29"/>
+        <path d="M70 112 98 66h14l40 46Z" fill="#212838"/>
+        <ellipse cx="44" cy="95" rx="40" ry="16" fill="url(#beam)" opacity=".55"/>
+        <path d="M40 92q4-14 18-16h40q12 2 18 16v8H40Z" fill="#2c3550"/>
+        <path d="M58 78h38q8 2 12 12H50q2-10 8-12Z" fill="#455277"/>
+        <circle cx="58" cy="101" r="6" fill="#0e121c"/><circle cx="104" cy="101" r="6" fill="#0e121c"/>
+        <circle cx="43" cy="94" r="3" fill="#fff6d8"/>
+        <rect width="180" height="112" fill="url(#shade)"/>
+      </g>
+      <rect x="9" y="9" width="46" height="19" rx="9.5" fill="#ff4d5e"/>
+      <circle cx="19" cy="18.5" r="3" fill="#fff"/>
+      <text x="26" y="22.5" font-size="10" font-weight="800" fill="#fff" letter-spacing=".6">LIVE</text>
+      <text x="11" y="92" font-size="13" font-weight="700" fill="#fff">Driveway</text>
+      <text x="11" y="105" font-size="9.5" fill="#ffffff" fill-opacity=".72">Floodlight on</text>
+    </g>
+
+    <!-- tile 3: Backyard, dawn -->
+    <g transform="translate(828 236)">
+      <g clip-path="url(#t1)">
+        <rect width="180" height="112" fill="url(#skyDawn)"/>
+        <circle cx="40" cy="70" r="40" fill="#fff4cf" fill-opacity=".25" filter="url(#blur6)"/>
+        <path d="M0 78q60-14 180 0V112H0Z" fill="#20473a"/>
+        <circle cx="132" cy="58" r="20" fill="#163a2e"/><circle cx="150" cy="66" r="16" fill="#1a4234"/><rect x="134" y="70" width="5" height="18" fill="#122c22"/>
+        <circle cx="26" cy="68" r="12" fill="#1a4234"/>
+        <g stroke="#2e5c4a" stroke-width="3"><path d="M0 92h180"/><path d="M12 82v22M36 82v22M60 82v22M84 82v22M108 82v22"/></g>
+        <rect width="180" height="112" fill="url(#shade)"/>
+      </g>
+      <text x="11" y="92" font-size="13" font-weight="700" fill="#fff">Backyard</text>
+      <text x="11" y="105" font-size="9.5" fill="#ffffff" fill-opacity=".72">Updated 1 min ago</text>
+    </g>
+
+    <!-- tile 4: Garage, sunset -->
+    <g transform="translate(1020 236)">
+      <g clip-path="url(#t1)">
+        <rect width="180" height="112" fill="url(#skySunset)"/>
+        <circle cx="150" cy="48" r="14" fill="#ffcf8a" fill-opacity=".85"/>
+        <path d="M20 46 74 22l54 24v66H20Z" fill="#2b2338"/>
+        <rect x="38" y="58" width="72" height="54" rx="2" fill="#3b3150"/>
+        <g stroke="#2b2338" stroke-width="2.4"><path d="M38 70h72M38 82h72M38 94h72"/></g>
+        <rect x="0" y="104" width="180" height="8" fill="#231c2e"/>
+        <rect width="180" height="112" fill="url(#shade)"/>
+      </g>
+      <rect x="123" y="9" width="48" height="19" rx="9.5" fill="#0f1219" fill-opacity=".62"/>
+      <path d="M135 13.5 131 19.5h3.5l-1 5 4.5-6.5h-3.5Z" fill="#fff"/>
+      <text x="155" y="22.5" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">100%</text>
+      <text x="11" y="92" font-size="13" font-weight="700" fill="#fff">Garage</text>
+      <text x="11" y="105" font-size="9.5" fill="#ffffff" fill-opacity=".72">Updated just now</text>
+    </g>
+  </g>
+
+  <!-- left: brand -->
+  <g transform="translate(96 82)" filter="url(#logoGlow)">
+    <rect width="92" height="92" rx="21" fill="url(#brand)"/>
+    <g transform="scale(1.4375)" fill="none" stroke="#fff" stroke-linejoin="round">
+      <path d="M14.5 29.5 32 15.5l17.5 14V47a3.5 3.5 0 0 1-3.5 3.5H18a3.5 3.5 0 0 1-3.5-3.5Z" stroke-width="4"/>
+      <circle cx="32" cy="36" r="7.5" stroke-width="3.6"/>
+      <circle cx="32" cy="36" r="2.6" fill="#fff" stroke="none"/>
+    </g>
+  </g>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif">
+    <text x="92" y="252" font-size="70" font-weight="800" letter-spacing="-2" fill="#f4f6fa">HomeBase<tspan fill="url(#brandText)">View</tspan></text>
+    <text x="96" y="296" font-size="23" fill="#9aa3b5">Your Ring cameras, live in the macOS menu bar.</text>
+
+    <g font-size="14" font-weight="600" fill="#d6dbe6">
+      <g transform="translate(96 324)">
+        <rect width="104" height="32" rx="16" fill="#ffffff" fill-opacity=".06" stroke="#ffffff" stroke-opacity=".10"/>
+        <circle cx="18" cy="16" r="4" fill="#ff4d5e"/>
+        <text x="30" y="21">Live view</text>
+      </g>
+      <g transform="translate(212 324)">
+        <rect width="128" height="32" rx="16" fill="#ffffff" fill-opacity=".06" stroke="#ffffff" stroke-opacity=".10"/>
+        <circle cx="18" cy="16" r="4" fill="#2fd07f"/>
+        <text x="30" y="21">Two-way talk</text>
+      </g>
+      <g transform="translate(352 324)">
+        <rect width="128" height="32" rx="16" fill="#ffffff" fill-opacity=".06" stroke="#ffffff" stroke-opacity=".10"/>
+        <circle cx="18" cy="16" r="4" fill="#ffb224"/>
+        <text x="30" y="21">Instant alerts</text>
+      </g>
+      <g transform="translate(492 324)">
+        <rect width="132" height="32" rx="16" fill="#ffffff" fill-opacity=".06" stroke="#ffffff" stroke-opacity=".10"/>
+        <circle cx="18" cy="16" r="4" fill="#1fc8e8"/>
+        <text x="30" y="21">Clip playback</text>
+      </g>
+    </g>
+  </g>
+</svg>

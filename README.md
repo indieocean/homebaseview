@@ -1,92 +1,231 @@
-# HomeBaseView
+<p align="center">
+  <img src="docs/assets/header.svg" alt="HomeBaseView: your Ring cameras, live in the macOS menu bar" width="100%">
+</p>
 
-A personal Ring camera viewer for macOS. It lives in the menu bar and gives you:
+<p align="center">
+  <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111?logo=apple&logoColor=white">
+  <img alt="Node 20+" src="https://img.shields.io/badge/Node-20%2B-3c873a?logo=node.js&logoColor=white">
+  <img alt="Swift 5.10" src="https://img.shields.io/badge/Swift-5.10-f05138?logo=swift&logoColor=white">
+  <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-6a7dff">
+</p>
 
-- Live view of any camera, with sound
-- Two-way talk through the camera speaker using your Mac's microphone
-- A grid of camera stills that refreshes on its own
-- Floodlight, siren and motion-detection toggles
-- Native notifications for doorbell presses and motion, with a snapshot attached
-- A 24-hour activity log with person, package and vehicle labels, and recorded clip playback (needs Ring Protect)
-- Battery, charging, offline and low-battery status
+<p align="center">
+  <b>HomeBaseView</b> is a small, open-source macOS app that puts your Ring doorbells and cameras one click away in the menu bar.<br>
+  Watch live, talk to visitors, flip on the floodlight, and get a notification with a snapshot the moment someone is at the door.
+</p>
 
-It talks to Ring's cloud the same way the Ring app does, using the open-source
-[`ring-client-api`](https://github.com/dgreif/ring) library. This is unofficial and
-for personal use only.
+---
+
+> [!IMPORTANT]
+> HomeBaseView is an independent project. It is **not affiliated with, endorsed by, or supported by Ring or Amazon**.
+> It talks to Ring through the community-maintained [`ring-client-api`](https://github.com/dgreif/ring), which uses the same private API as the Ring mobile app.
+> Ring can change that API at any time. Use it for your own cameras, at your own risk.
+
+## Contents
+
+- [Features](#features)
+- [Quick start](#quick-start)
+- [How it works](#how-it-works)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Privacy and security](#privacy-and-security)
+- [Project layout](#project-layout)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [Acknowledgements](#acknowledgements)
+- [License](#license)
+
+## Features
+
+| | |
+| --- | --- |
+| 🎥 **Live view** | Low-latency video from any camera, with sound. Pop it out into a resizable window to keep watching. |
+| 🎙️ **Two-way talk** | Speak to visitors through the camera's speaker using your Mac's microphone. |
+| 🔔 **Instant alerts** | Native macOS notifications for doorbell presses and motion, with a snapshot attached. The menu bar icon turns red until you look. |
+| 🧠 **Smart labels** | Ring's person, package, vehicle and animal detection, shown right in the activity log. |
+| 🎞️ **Clip playback** | Replay recordings from the last 24 hours. Requires a Ring Protect plan. |
+| 💡 **Device controls** | Toggle floodlights, sound the siren, and turn motion detection on or off. |
+| 🔋 **Status at a glance** | Battery level, charging, offline and motion badges on every camera tile. |
+| 🌗 **Feels native** | Light and dark mode, reduced-motion support, Launch at Login, and a popover you can drag into its own window. |
+
+## Quick start
+
+**Requirements:** macOS 14 Sonoma or later, [Node.js](https://nodejs.org) 20 or later, and the Xcode command line tools (`xcode-select --install`).
+
+```sh
+git clone https://github.com/<your-account>/homebaseview.git
+cd homebaseview
+npm install
+bash macos/build-app.sh --install   # builds HomeBaseView.app and copies it to /Applications
+open /Applications/HomeBaseView.app
+```
+
+Click the house icon in the menu bar and sign in with your Ring email and password, then enter the code Ring texts or emails you.
+No API key or developer account is needed.
+
+> [!TIP]
+> Drop `--install` to build into `macos/build/HomeBaseView.app` without touching `/Applications`.
+
+### Run it in a browser instead
+
+The server and web UI work on their own, without the menu bar app:
+
+```sh
+npm install
+npm start -- --open
+```
+
+The terminal prints a one-time link with an access token. Opening it stores a cookie, so later visits to `http://127.0.0.1:18700` just work.
 
 ## How it works
 
-```
-HomeBaseView.app (Swift menu bar shell)
- ├─ starts ─▶ Node server on 127.0.0.1:18700 (server/)
- │             ├─ ring-client-api ─▶ Ring cloud (OAuth, REST, push notifications)
- │             ├─ WebRTC live view ─▶ FFmpeg ─▶ HLS segments in ~/.homebaseview/hls
- │             └─ FFmpeg mic capture ─▶ WebRTC return audio (two-way talk)
- ├─ shows ──▶ web UI (web/) in a popover
- └─ polls ──▶ /api/events for native notifications
+```mermaid
+flowchart LR
+  subgraph Mac["Your Mac"]
+    App["HomeBaseView.app<br/><sub>Swift menu bar shell</sub>"]
+    UI["Web UI<br/><sub>popover or window</sub>"]
+    Server["Local server<br/><sub>Node.js · 127.0.0.1:18700</sub>"]
+    FF["FFmpeg"]
+  end
+  Ring[("Ring cloud")]
+
+  App -- launches and supervises --> Server
+  App -- hosts --> UI
+  UI -- REST + server-sent events --> Server
+  App -- polls events for notifications --> Server
+  Server -- "ring-client-api<br/>OAuth · REST · push" --> Ring
+  Ring -- "WebRTC live video" --> Server
+  Server --> FF
+  FF -- "HLS segments" --> UI
+  FF -- "mic audio (two-way talk)" --> Server
 ```
 
-All files live in `~/.homebaseview`, readable only by you:
+- **Sign-in.** Your email, password and verification code go to Ring's OAuth endpoint. Only the resulting refresh token is saved, and Ring rotates it on every use.
+- **Events.** Ring's push notifications arrive in real time. The server also polls Ring's event history every few seconds as a backup, and merges duplicates.
+- **Live view.** The camera streams to the server over WebRTC through Ring's signalling service. FFmpeg repackages it as a short rolling HLS playlist that the UI plays with [hls.js](https://github.com/video-dev/hls.js).
+- **Talk.** FFmpeg captures your default microphone and encodes Opus or G.711, depending on the camera. The audio goes back over the same WebRTC session.
+- **Battery friendly.** A stream stops when you close the viewer or the popover, or after 30 seconds with nobody watching.
 
-| File | Purpose |
+## Usage
+
+| Action | How |
 | --- | --- |
-| `ring-token` | Ring refresh token. Ring rotates it on every use. |
-| `session-token` | Shared secret that the UI and menu bar app send to the local server. |
-| `events.json` | Activity log for the last 24 hours. |
-| `server.log` | Server log, rotated at 1 MB. |
-| `hls/` | Live-view segments. Deleted when a stream stops and on every start. |
+| Open the camera grid | Click the menu bar icon |
+| Watch a camera live | Click its tile |
+| Talk, light, siren, motion, save still | Buttons under the live video |
+| See what happened | **Activity** tab, then click an event to play its clip |
+| Switch between grid and large tiles | Layout button in the top bar |
+| Open a resizable window | Pop-out button in the top bar, or right-click the icon and choose **Open in Window** |
+| Launch at Login, server log, restart | Right-click the menu bar icon |
+| Notification and refresh settings | Settings button in the top bar |
 
-The server only listens on `127.0.0.1`, rejects requests for any other host name,
-and requires the session token on every API call.
+The first time you press **Talk**, macOS asks for microphone access for HomeBaseView.
 
-## Build and run the menu bar app
+## Configuration
 
-Requires Node 20 or newer and Xcode command line tools.
+Everything works out of the box. These environment variables are optional:
 
-```sh
-npm install
-npm run app            # builds macos/build/HomeBaseView.app
-open macos/build/HomeBaseView.app
-
-# or build and copy to /Applications in one step
-bash macos/build-app.sh --install
-```
-
-Click the doorbell icon in the menu bar and sign in with your Ring email and password.
-Ring then asks for a verification code. Right-click the icon for Launch at Login,
-Open in Browser, the server log, and Restart Server. Drag the popover away from the
-menu bar to keep it open as a floating window.
-
-The first time you press Talk, macOS asks for microphone permission for HomeBaseView.
-
-## Run without the menu bar app
-
-```sh
-npm install
-npm start -- --open    # opens the UI in your browser
-```
-
-The terminal prints a link with the session token. Opening it once stores a cookie,
-so later visits to `http://127.0.0.1:18700` just work. Browser mode uses web
-notifications, which you can turn on in Settings.
-
-## Settings via environment variables
-
-| Variable | Default | Meaning |
+| Variable | Default | Description |
 | --- | --- | --- |
-| `HOMEBASEVIEW_PORT` | `18700` | Local server port |
-| `HOMEBASEVIEW_POLL_MS` | `5000` | How often to poll Ring event history as a backup for push |
-| `HOMEBASEVIEW_CLIENT_NAME` | `HomeBaseView` | Name shown in Ring app > Control Center > Authorized Client Devices |
-| `HOMEBASEVIEW_DATA_DIR` | `~/.homebaseview` | Where tokens, logs and segments are stored |
-| `HOMEBASEVIEW_VERBOSE` | unset | Set to `1` for ring-client-api debug logging |
+| `HOMEBASEVIEW_PORT` | `18700` | Port for the local server |
+| `HOMEBASEVIEW_POLL_MS` | `5000` | How often to poll Ring event history as a backup for push. Minimum 2000. |
+| `HOMEBASEVIEW_CLIENT_NAME` | `HomeBaseView` | Name shown in the Ring app under Control Center, Authorized Client Devices |
+| `HOMEBASEVIEW_DATA_DIR` | `~/.homebaseview` | Where tokens, logs and temporary video are stored |
+| `HOMEBASEVIEW_VERBOSE` | unset | Set to `1` for detailed `ring-client-api` logging |
 
-Run `npm start -- --new-token` to rotate the session token. Signing out in Settings
-deletes the Ring token. You can also revoke HomeBaseView from the Ring app's Control Center.
+Run `npm start -- --new-token` to rotate the local access token.
 
-## Notes
+## Privacy and security
 
-- Motion and doorbell events arrive by push when Ring delivers it. History polling
-  catches anything push misses, with Ring's usual delay of 20 to 60 seconds.
-- Live streams stop when you close the viewer, when the popover closes, or after
-  30 seconds with no viewer, so battery cameras are not kept awake.
-- Snapshots on battery cameras are limited by Ring and may be a few minutes old.
+HomeBaseView has no backend, analytics or telemetry. It only talks to Ring.
+
+- **Local only.** The server listens on `127.0.0.1` and rejects requests addressed to any other host name, which blocks DNS-rebinding attacks.
+- **Authenticated.** Every API call needs a random 256-bit token. The menu bar app reads it from disk, and the browser keeps it in an `HttpOnly`, `SameSite=Strict` cookie.
+- **Owner-only files.** Everything is written with `0600` permissions inside `~/.homebaseview`:
+
+  | File | Contents |
+  | --- | --- |
+  | `ring-token` | Ring refresh token |
+  | `session-token` | Local access token for the UI and menu bar app |
+  | `events.json` | Activity log for the last 24 hours |
+  | `server.log` | Server log, rotated at 1 MB |
+  | `hls/` | Live video segments, deleted when a stream stops and on every start |
+
+- **Easy to revoke.** **Sign out** in Settings deletes the Ring token. You can also remove *HomeBaseView* from the Ring app under Control Center, Authorized Client Devices.
+
+## Project layout
+
+```
+.
+├── server/            Node.js server (ES modules, no build step)
+│   ├── index.js         startup, shutdown, parent-process watchdog
+│   ├── ring.js          sign-in, cameras, push + polled events, recordings
+│   ├── streams.js       live view (WebRTC → FFmpeg → HLS) and two-way talk
+│   ├── snapshots.js     cached camera stills
+│   └── routes.js        REST API, server-sent events, auth
+├── web/               UI served by the server (plain HTML, CSS, JS)
+├── macos/             Swift menu bar app
+│   ├── Sources/HomeBaseView/
+│   ├── build-app.sh     builds and signs HomeBaseView.app
+│   └── make-icon.swift  renders the app icon
+└── docs/assets/       README artwork
+```
+
+## Troubleshooting
+
+<details>
+<summary><b>The Verify button says the code is wrong or expired</b></summary>
+
+Codes expire after a few minutes, and a sign-in attempt is only kept for 10 minutes. Click **Start over** to get a fresh code.
+</details>
+
+<details>
+<summary><b>Live view never starts</b></summary>
+
+Check `~/.homebaseview/server.log`, which you can also open by right-clicking the menu bar icon and choosing **Show Server Log**. Battery cameras can take several seconds to wake up. Make sure nothing else is using port 18700.
+</details>
+
+<details>
+<summary><b>Talk says the microphone is blocked</b></summary>
+
+Allow HomeBaseView in System Settings, Privacy & Security, Microphone. Then quit and reopen the app.
+</details>
+
+<details>
+<summary><b>No notifications</b></summary>
+
+Allow HomeBaseView in System Settings, Notifications. Push from Ring can be delayed. The history poll catches anything push misses, usually within Ring's own 20 to 60 second lag.
+</details>
+
+<details>
+<summary><b>"Ring signed this Mac out"</b></summary>
+
+Ring invalidates sessions when your password changes or the device is removed in Control Center. Sign in again.
+</details>
+
+## Contributing
+
+Issues and pull requests are welcome.
+
+1. Fork the repo and create a branch.
+2. Run the server with `npm start -- --open` and edit files in `web/` or `server/`. There's no build step, so just reload.
+3. For the menu bar app, run `npm run app` and open `macos/build/HomeBaseView.app`.
+4. Check syntax with `npm run check`, describe what you tested, and open a PR.
+
+Please never include tokens, logs or camera images in issues.
+
+## Acknowledgements
+
+- [`ring-client-api`](https://github.com/dgreif/ring) by Dusty Greif and contributors, which does the hard work of speaking Ring
+- [`hls.js`](https://github.com/video-dev/hls.js) for in-browser live playback
+- [`werift`](https://github.com/shinyoshiaki/werift-webrtc) for WebRTC in Node.js
+- [`ffmpeg-for-homebridge`](https://github.com/homebridge/ffmpeg-for-homebridge) for a ready-to-use FFmpeg build
+
+## License
+
+HomeBaseView is released under the [MIT License](LICENSE).
+
+The built app bundles third-party software under its own licenses, notably Node.js and an FFmpeg build from `ffmpeg-for-homebridge`.
+Review those licenses before you redistribute a built `HomeBaseView.app`. This repository contains source code only.
+
+Ring is a trademark of Ring LLC, an Amazon company. It is used here only to describe compatibility.

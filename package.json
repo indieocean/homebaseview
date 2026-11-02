@@ -21,5 +21,6 @@
     "ring-client-api": "^14.3.0",
     "rxjs": "^7.8.2",
     "werift": "^0.22.4"
-  }
+  },
+  "license": "MIT"
 }
