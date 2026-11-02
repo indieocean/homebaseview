@@ -7,6 +7,7 @@ import WebKit
 final class WebViewController: NSViewController, WKScriptMessageHandlerWithReply, WKUIDelegate, WKNavigationDelegate, WKDownloadDelegate {
     private(set) var webView: WKWebView!
     private var loadedToken: String?
+    var onOpenWindow: (() -> Void)?
 
     override func loadView() {
         let config = WKWebViewConfiguration()
@@ -36,7 +37,7 @@ final class WebViewController: NSViewController, WKScriptMessageHandlerWithReply
         loadedToken = nil
         let escaped = text.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
         webView.loadHTMLString("""
-        <html><body style="margin:0;height:100vh;display:grid;place-items:center;background:#0f1115;color:#8b93a3;
+        <html><body style="margin:0;height:100vh;display:grid;place-items:center;background:#0a0c11;color:#8b94a7;
         font:14px -apple-system,sans-serif;text-align:center;padding:24px;box-sizing:border-box">\(escaped)</body></html>
         """, baseURL: nil)
     }
@@ -57,6 +58,9 @@ final class WebViewController: NSViewController, WKScriptMessageHandlerWithReply
         case "prefs":
             if let v = body["notify"] as? Bool { UserDefaults.standard.set(v, forKey: "notify") }
             if let v = body["notifyMotion"] as? Bool { UserDefaults.standard.set(v, forKey: "notifyMotion") }
+            replyHandler(true, nil)
+        case "openWindow":
+            onOpenWindow?()
             replyHandler(true, nil)
         case "requestMic":
             // The server's FFmpeg captures the mic; macOS attributes it to this app.

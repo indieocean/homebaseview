@@ -12,7 +12,7 @@ const nativeCall = async (msg) => {
 // Preferences (per browser; mirrored to the menu bar app for notifications)
 // ---------------------------------------------------------------------------
 const prefs = (() => {
-  const defaults = { notify: true, notifyMotion: true, refresh: 30, lastSeenSeq: 0 }
+  const defaults = { notify: true, notifyMotion: true, refresh: 30, lastSeenSeq: 0, layout: 'grid' }
   try { return { ...defaults, ...JSON.parse(localStorage.getItem('homebaseview-prefs') || '{}') } } catch { return defaults }
 })()
 function savePrefs() {
@@ -159,6 +159,7 @@ function connectStream() {
     if (state.events.some((x) => x.seq === e.seq)) return
     state.events.unshift(e)
     renderActivity()
+    if (state.player?.cameraId === e.cameraId) renderRecent()
     notify(e)
     refreshSnapshot(e.cameraId)
   })
@@ -206,6 +207,10 @@ const ICONS = {
   motion: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4"/></svg>',
   ding: '<svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
   battery: '<svg viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/></svg>',
+  person: '<svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+  package: '<svg viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5V8ZM3 8l9 5 9-5M12 13v8"/></svg>',
+  car: '<svg viewBox="0 0 24 24"><path d="M5 17h14v-5l-2-5H7l-2 5v5ZM5 12h14"/><circle cx="8" cy="17" r="2"/><circle cx="16" cy="17" r="2"/></svg>',
+  chev: '<svg class="chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>',
   bolt: '<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg>',
 }
 
@@ -219,7 +224,9 @@ function renderGrid() {
     tile.innerHTML = `
       <img class="thumb" alt="">
       <div class="chips"></div>
-      <div class="meta"><span class="name"></span><span class="battery"></span><span class="age"></span></div>`
+      <span class="battery" hidden></span>
+      <span class="play"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z"/></svg></span>
+      <div class="caption"><span class="name"></span><span class="age"></span></div>`
     tile.addEventListener('click', () => openLive(cam.id))
     grid.append(tile)
     renderTile(cam)
@@ -233,17 +240,18 @@ function renderTile(cam) {
   if (!tile) return
   tile.querySelector('.name').textContent = cam.name
   const chips = []
+  tile.classList.toggle('offline', !!cam.isOffline)
   if (cam.motionActive) chips.push('<span class="chip motion">Motion</span>')
   if (cam.streaming) chips.push('<span class="chip live">Live</span>')
-  if (cam.isOffline) chips.push('<span class="chip offline">Offline</span>')
-  if (cam.hasLowBattery) chips.push('<span class="chip low">Low battery</span>')
+  if (cam.isOffline) chips.push('<span class="chip">Offline</span>')
   if (!cam.motionDetectionEnabled) chips.push('<span class="chip">Motion off</span>')
-  if (cam.lightOn) chips.push('<span class="chip">Light on</span>')
+  if (cam.lightOn) chips.push('<span class="chip light">Light on</span>')
   if (cam.sirenOn) chips.push('<span class="chip motion">Siren</span>')
   tile.querySelector('.chips').innerHTML = chips.join('')
-  tile.querySelector('.battery').innerHTML = cam.hasBattery && cam.batteryLevel != null
-    ? `${cam.isCharging ? ICONS.bolt : ICONS.battery}${cam.batteryLevel}%`
-    : ''
+  const battery = tile.querySelector('.battery')
+  battery.hidden = !(cam.hasBattery && cam.batteryLevel != null)
+  battery.classList.toggle('low', !!cam.hasLowBattery)
+  battery.innerHTML = battery.hidden ? '' : `${cam.isCharging ? ICONS.bolt : ICONS.battery}${cam.batteryLevel}%`
   updateAge(cam.id)
 }
 
@@ -259,19 +267,23 @@ function refreshSnapshot(id) {
   const img = new Image()
   img.onload = () => {
     snapLoading.delete(id)
-    const thumb = document.querySelector(`.tile[data-id="${id}"] .thumb`)
-    if (thumb) thumb.src = img.src
+    const tile = document.querySelector(`.tile[data-id="${id}"]`)
+    if (tile) { tile.querySelector('.thumb').src = img.src; tile.classList.add('loaded') }
     state.snapshotAt.set(id, Date.now())
     updateAge(id)
   }
-  img.onerror = () => snapLoading.delete(id)
+  img.onerror = () => {
+    snapLoading.delete(id)
+    document.querySelector(`.tile[data-id="${id}"]`)?.classList.add('loaded') // stop the shimmer
+  }
   img.src = snapshotUrl(id)
 }
 
 function updateAge(id) {
   const el = document.querySelector(`.tile[data-id="${id}"] .age`)
   const t = state.snapshotAt.get(id)
-  if (el) el.textContent = t ? relTime(t) : ''
+  const cam = state.cameras.get(id)
+  if (el) el.textContent = cam?.isOffline ? 'Camera offline' : t ? `Updated ${relTime(t)}` : 'Loading…'
 }
 
 function restartSnapshotTimer() {
@@ -329,24 +341,46 @@ function renderActivity() {
       ul.append(li)
       lastDay = day
     }
-    const li = document.createElement('li')
-    const btn = document.createElement('button')
-    btn.innerHTML = `
-      <span class="kind ${e.kind}">${ICONS[e.kind] || ICONS.motion}</span>
-      <span class="what"><div></div><div class="muted small"></div></span>
-      <span class="when"><div></div><div></div></span>
-      ${e.seq > prefs.lastSeenSeq ? '<span class="new"></span>' : ''}`
-    btn.querySelector('.what div:first-child').textContent = eventLabel(e)
-    btn.querySelector('.what .muted').textContent = e.cameraName
-    btn.querySelector('.when div:first-child').textContent = new Date(e.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-    btn.querySelector('.when div:last-child').textContent = relTime(Date.parse(e.timestamp))
-    btn.addEventListener('click', () => openClip(e))
-    li.append(btn)
-    ul.append(li)
+    ul.append(eventItem(e))
   }
   $('#no-activity').hidden = list.length > 0
   if (state.tab === 'activity' && !document.hidden) markEventsSeen()
   updateBadge()
+}
+
+function eventIcon(e) {
+  if (e.kind === 'ding') return ['ding', ICONS.ding]
+  const d = e.detection || ''
+  if (/human|person/.test(d)) return ['person', ICONS.person]
+  if (/package/.test(d)) return ['', ICONS.package]
+  if (/vehicle/.test(d)) return ['', ICONS.car]
+  return ['', ICONS.motion]
+}
+
+function eventItem(e, { showCamera = true } = {}) {
+  const li = document.createElement('li')
+  const btn = document.createElement('button')
+  const [cls, icon] = eventIcon(e)
+  btn.innerHTML = `
+    <span class="kind ${cls}">${icon}</span>
+    <span class="what"><b></b><small></small></span>
+    <span class="when"><b></b><span></span></span>
+    ${e.seq > prefs.lastSeenSeq ? '<span class="new"></span>' : ICONS.chev}`
+  btn.querySelector('.what b').textContent = eventLabel(e)
+  btn.querySelector('.what small').textContent = showCamera ? e.cameraName : 'Tap to play recording'
+  btn.querySelector('.when b').textContent = new Date(e.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  btn.querySelector('.when span').textContent = relTime(Date.parse(e.timestamp))
+  btn.addEventListener('click', () => openClip(e))
+  li.append(btn)
+  return li
+}
+
+function renderRecent() {
+  const p = state.player
+  if (!p) return
+  const list = state.events.filter((e) => e.cameraId === p.cameraId && e.id !== p.event?.id).slice(0, 8)
+  $('#recent-list').replaceChildren(...list.map((e) => eventItem(e, { showCamera: false })))
+  $('#recent-empty').hidden = list.length > 0
 }
 
 function markEventsSeen() {
@@ -376,7 +410,12 @@ function notify(e) {
 // ---------------------------------------------------------------------------
 const video = $('#video')
 
-function setStatus(text) { $('#video-status').textContent = text || '' }
+function setStatus(text, { spinner = true } = {}) {
+  const el = $('#video-status')
+  el.querySelector('.text').textContent = text || ''
+  el.classList.toggle('show', !!text)
+  el.classList.toggle('idle', !spinner)
+}
 function setPlayerError(text) { $('#player-error').textContent = text || ''; $('#player-error').hidden = !text }
 
 async function openLive(cameraId) {
@@ -395,6 +434,7 @@ async function openLive(cameraId) {
   video.poster = document.querySelector(`.tile[data-id="${cameraId}"] .thumb`)?.src || ''
   setPlayerError('')
   renderLiveControls()
+  renderRecent()
   setStatus(cam.isOffline ? 'Camera reports offline. Trying anyway…' : 'Connecting to camera…')
 
   try {
@@ -464,6 +504,7 @@ async function openClip(event) {
   $('#live-dot').hidden = true
   $('#live-controls').hidden = true
   setPlayerError('')
+  renderRecent()
   setStatus('Loading recording…')
   video.poster = ''
   try {
@@ -604,12 +645,29 @@ function download(href, name) {
 }
 
 // ---------------------------------------------------------------------------
+// Layout and window
+// ---------------------------------------------------------------------------
+function applyLayout() { document.body.classList.toggle('layout-large', prefs.layout === 'large') }
+$('#layout-btn').addEventListener('click', () => {
+  prefs.layout = prefs.layout === 'large' ? 'grid' : 'large'
+  savePrefs()
+  applyLayout()
+})
+applyLayout()
+if (native) {
+  $('#window-btn').hidden = false
+  $('#window-btn').addEventListener('click', () => nativeCall({ type: 'openWindow' }))
+}
+
+// ---------------------------------------------------------------------------
 // Settings
 // ---------------------------------------------------------------------------
 $('#settings-btn').addEventListener('click', () => {
   $('#set-notify').checked = prefs.notify
   $('#set-notify-motion').checked = prefs.notifyMotion
   $('#set-refresh').value = String(prefs.refresh)
+  const n = state.cameras.size
+  $('#account-line').textContent = `Connected to Ring · ${n} camera${n === 1 ? '' : 's'}`
   $('#settings').showModal()
 })
 $('#set-notify').addEventListener('change', async (e) => {
@@ -665,5 +723,5 @@ function dayLabel(iso) {
   return d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })
 }
 
-if (native) $('#notify-row').querySelector('.muted').textContent = 'Shown by the menu bar app'
+if (native) $('#notify-row').querySelector('small').textContent = 'Shown by the menu bar app'
 boot()
